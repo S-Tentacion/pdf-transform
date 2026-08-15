@@ -1,0 +1,15 @@
+# Dependencies
+node_modules/
+
+# Generated PDFs and visual verification files
+output/
+tmp/
+
+# Local configuration and logs
+.env
+.env.*
+*.log
+
+# OS/editor files
+.DS_Store
+Thumbs.db
