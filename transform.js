@@ -4,10 +4,12 @@ import process from 'node:process';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { createCanvas, DOMMatrix, ImageData, Path2D } from '@napi-rs/canvas';
+import createQpdf from '@neslinesli93/qpdf-wasm';
 
 const require = createRequire(import.meta.url);
-const { PDFDocument, StandardFonts, rgb } = require('pdf-lib');
+const { PDFDocument, StandardFonts, rgb, PDFName, PDFArray, PDFDict, PDFString, PDFHexString } = require('pdf-lib');
 const moduleDirectory = path.dirname(fileURLToPath(import.meta.url));
+const DUMP4EXAM_URL = 'https://dump4exam.vercel.app/';
 
 const LETTER = { width: 612, height: 792 };
 
@@ -94,6 +96,69 @@ function replaceText(page, font, { x, top, width, height, value, size, color = r
   });
 }
 
+function annotationUri(annotation) {
+  const action = annotation?.lookupMaybe(PDFName.of('A'), PDFDict);
+  const uri = action?.get(PDFName.of('URI'));
+  return uri instanceof PDFString || uri instanceof PDFHexString ? uri.decodeText() : '';
+}
+
+function removePassLeaderLinks(page, pdf) {
+  const annotations = page.node.lookupMaybe(PDFName.of('Annots'), PDFArray);
+  if (!annotations) return;
+  const kept = PDFArray.withContext(pdf.context);
+  for (let index = 0; index < annotations.size(); index += 1) {
+    const reference = annotations.get(index);
+    const annotation = pdf.context.lookupMaybe(reference, PDFDict);
+    const isLink = annotation?.lookupMaybe(PDFName.of('Subtype'), PDFName)?.asString() === '/Link';
+    if (isLink && /passleader/i.test(annotationUri(annotation))) continue;
+    kept.push(reference);
+  }
+  if (kept.size() > 0) page.node.set(PDFName.of('Annots'), kept);
+  else page.node.delete(PDFName.of('Annots'));
+}
+
+function addUriLink(page, pdf, box, url) {
+  const target = scaleBox(page, box);
+  const annotation = pdf.context.obj({
+    Type: 'Annot',
+    Subtype: 'Link',
+    Rect: [target.x, target.y, target.x + target.width, target.y + target.height],
+    Border: [0, 0, 0],
+    A: { S: 'URI', URI: PDFString.of(url) },
+  });
+  const reference = pdf.context.register(annotation);
+  let annotations = page.node.lookupMaybe(PDFName.of('Annots'), PDFArray);
+  if (!annotations) {
+    annotations = PDFArray.withContext(pdf.context);
+    page.node.set(PDFName.of('Annots'), annotations);
+  }
+  annotations.push(reference);
+}
+
+function drawFooter(page, pdf, font) {
+  const line = { x: 88, top: 733, width: 385, height: 20 };
+  const url = { x: 88, top: 757, width: 165, height: 19 };
+  const placement = scaleBox(page, line);
+  const textY = placement.y + (placement.height - 10) / 2;
+  const prefix = 'Get Latest & Actual ';
+  const examCode = 'PL-400';
+  const suffix = " Exam's Question and Answers from Dump4Exam.";
+  const blue = rgb(0, 0, 1);
+
+  cover(page, line);
+  page.drawText(prefix, { x: placement.x, y: textY, size: 10, font });
+  const codeX = placement.x + font.widthOfTextAtSize(prefix, 10);
+  const codeWidth = font.widthOfTextAtSize(examCode, 10);
+  page.drawText(examCode, { x: codeX, y: textY, size: 10, font, color: blue });
+  page.drawLine({ start: { x: codeX, y: textY - 1 }, end: { x: codeX + codeWidth, y: textY - 1 }, thickness: 0.5, color: blue });
+  page.drawText(suffix, { x: codeX + codeWidth, y: textY, size: 10, font });
+
+  replaceText(page, font, { ...url, value: DUMP4EXAM_URL, size: 9, color: blue });
+  const standardCodeX = line.x + font.widthOfTextAtSize(prefix, 10);
+  addUriLink(page, pdf, { x: standardCodeX, top: line.top, width: codeWidth, height: line.height }, DUMP4EXAM_URL);
+  addUriLink(page, pdf, url, DUMP4EXAM_URL);
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   if (args.help) return usage();
@@ -145,15 +210,28 @@ async function main() {
   async function loadEditableSource() {
     const source = await readFile(args.input);
     const originalWarn = console.warn;
-    try {
+    const load = async (bytes) => {
       // pdf-lib writes parser diagnostics through console.warn. We replace those
       // with one actionable error below instead of flooding the terminal.
       console.warn = () => {};
-      pdf = await PDFDocument.load(source, {
+      pdf = await PDFDocument.load(bytes, {
         ignoreEncryption: args.ignoreEncryption,
         updateMetadata: false,
       });
       pages = pdf.getPages();
+    };
+    try {
+      await load(source);
+    } catch (firstError) {
+      // QPDF repairs malformed cross-reference data and removes permissions
+      // encryption. That lets pdf-lib overlay the logo without rasterizing the
+      // rest of the document.
+      const qpdf = await createQpdf({
+        locateFile: (name) => path.join(moduleDirectory, 'node_modules', '@neslinesli93', 'qpdf-wasm', 'dist', name),
+      });
+      qpdf.FS.writeFile('/source.pdf', new Uint8Array(source));
+      qpdf.callMain(['--decrypt', '/source.pdf', '/repaired.pdf']);
+      await load(qpdf.FS.readFile('/repaired.pdf'));
     } finally {
       console.warn = originalWarn;
     }
@@ -191,18 +269,10 @@ async function main() {
       placeLogo(page, logo, { x: 116, top: 9, width: 195, height: 44 });
     }
 
-    // These repeat on the supplied document. They are deliberately small,
-    // separate overlays, so all other page content remains untouched.
+    removePassLeaderLinks(page, pdf);
+
     if (pageNumber >= 3) {
-      replaceText(page, font, {
-        x: 350, top: 733, width: 182, height: 20,
-        value: 'from Dump4Exam.', size: 10,
-      });
-      replaceText(page, font, {
-        x: 88, top: 757, width: 145, height: 19,
-        value: 'https://www.dump4exam.com', size: 9,
-        color: rgb(0, 0, 1),
-      });
+      drawFooter(page, pdf, font);
     }
   });
 
@@ -210,7 +280,7 @@ async function main() {
   if (pages.length >= 2) {
     replaceText(pages[1], font, {
       x: 88, top: 373, width: 390, height: 21,
-      value: 'support@dump4exam.com and our technical experts will provide support in 24 hours.', size: 10,
+      value: 'Dump4Exam@gmail.com and our technical experts will provide support in 24 hours.', size: 10,
       color: rgb(0, 0, 1),
     });
   }

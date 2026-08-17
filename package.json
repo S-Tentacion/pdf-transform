@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@napi-rs/canvas": "^1.0.6",
+    "@neslinesli93/qpdf-wasm": "^0.3.0",
     "express": "^5.1.0",
     "multer": "^2.0.2",
     "pdf-lib": "^1.17.1",

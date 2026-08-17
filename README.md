@@ -1,14 +1,15 @@
 # pdf-transform
 
 This Express + Node.js utility overlays the supplied `Dump4Exam` PNG where the fixed-layout
-PassLeader branding appears. It preserves the rest of a valid, unlocked PDF as
-vector content. The default coordinates are tuned for the supplied Letter-size
+PassLeader branding appears. It uses QPDF WebAssembly to repair protected PDFs,
+then preserves the rest of the document as vector content. The default coordinates are tuned for the supplied Letter-size
 `PassLeader-400_Latest.pdf`:
 
 - Cover logo on page 1
 - Repeating header logo on pages 3 onward
 - Repeating PassLeader footer name/URL on pages 3 onward
 - The support email on the notice page (page 2)
+- Removes PassLeader hyperlinks and makes the replacement URL/PL-400 link open `https://dump4exam.vercel.app/`
 
 ## Easiest way: browser download
 
@@ -31,10 +32,10 @@ needed.
 
 ## Command-line use
 
-The CLI tries the lossless `pdf-lib` overlay first. If it cannot parse the
-source, it automatically uses PDF.js at 120 DPI with JPEG quality 65. This is
-the compact default. Use `--dpi 180 --jpeg-quality 90` if you need the larger,
-higher-quality version:
+The CLI repairs the source with QPDF WebAssembly when necessary, then uses a
+lossless `pdf-lib` overlay. This preserves source quality and keeps output size
+close to the original. `--rasterize` is available only as a fallback for PDFs
+that cannot be repaired.
 
 ```powershell
 npm run transform -- `
