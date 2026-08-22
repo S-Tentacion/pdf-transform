@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "transform": "node transform.js"
+    "transform": "node transform.js",
+    "transform:certyiq": "node transform-certyiq.js"
   },
   "dependencies": {
     "@napi-rs/canvas": "^1.0.6",

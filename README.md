@@ -55,6 +55,24 @@ top edge of a 612 x 792 Letter page. Tweak only the coordinate blocks in the
 `pages.forEach` loop if a future PDF uses a different template. Add
 `--all-pages` only when page 2 should also receive a header logo.
 
+## CertyIQ to Dump4Pass
+
+The local page now includes a second form for the supplied CertyIQ A5 exam-PDF layout. Upload
+the CertyIQ PDF and a **Dump4Pass PNG logo**, then set the target website and support email.
+It replaces the CertyIQ cover and information-page branding, removes CertyIQ hyperlinks, and
+updates the title/closing-page links. The result remains a searchable vector PDF.
+
+Use the form at `http://localhost:3000`, or run it directly:
+
+```powershell
+npm run transform:certyiq -- `
+  --input "C:\path\to\CertIQ.pdf" `
+  --logo "C:\path\to\Dump4Pass.png" `
+  --url "https://your-site.example/" `
+  --email "support@your-site.example" `
+  --output ".\output\CertIQ-Dump4Pass.pdf"
+```
+
 ## Important
 
 Use the tool only for PDF material and branding that you are authorized to
