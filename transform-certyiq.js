@@ -2,20 +2,22 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
 import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
 
 const require = createRequire(import.meta.url);
 const { PDFDocument, StandardFonts, rgb, PDFName, PDFArray, PDFDict, PDFString, PDFHexString } = require('pdf-lib');
+const moduleDirectory = path.dirname(fileURLToPath(import.meta.url));
 
 const A5 = { width: 595, height: 421 };
 
 function usage(message) {
   if (message) console.error(`Error: ${message}\n`);
-  console.error(`Usage: node transform-certyiq.js --input <source.pdf> --logo <dump4pass.png> --output <result.pdf> [--url <website>] [--email <address>]`);
+  console.error(`Usage: node transform-certyiq.js --input <source.pdf> --output <result.pdf> [--logo <replacement.png>] [--url <website>] [--email <address>]`);
   process.exitCode = message ? 1 : 0;
 }
 
 function parseArgs(argv) {
-  const values = { url: 'https://dump4pass.com/', email: 'support@dump4pass.com' };
+  const values = { url: 'https://dump4exam.vercel.app/', email: 'Dump4Exam@gmail.com', logo: path.join(moduleDirectory, 'assets', 'dump4exam.png') };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     if (arg === '--help') return { help: true };
@@ -25,7 +27,7 @@ function parseArgs(argv) {
     values[arg.slice(2)] = value;
     index += 1;
   }
-  for (const key of ['input', 'logo', 'output']) if (!values[key]) return { error: `Missing --${key}` };
+  for (const key of ['input', 'output']) if (!values[key]) return { error: `Missing --${key}` };
   try {
     const url = new URL(values.url);
     if (!['http:', 'https:'].includes(url.protocol)) throw new Error();
@@ -82,24 +84,40 @@ function drawLines(page, font, lines, box, size, leading, color = rgb(0.25, 0.25
   lines.forEach((line, index) => page.drawText(line, { x: target.x, y: target.y + target.height - size - index * leading, size, font, color }));
 }
 
-function replaceDarkReviewText(page, font) {
-  // The top-right testimonial contains the remaining visible CertyIQ name.
-  const box = { x: 465, top: 37, width: 126, height: 58 };
-  page.drawRectangle({ ...scaleBox(page, box), color: rgb(0.12, 0.15, 0.18) });
-  const target = scaleBox(page, box);
+function drawCenteredText(page, font, value, centerX, y, size, color) {
+  page.drawText(value, { x: centerX - font.widthOfTextAtSize(value, size) / 2, y, size, font, color });
+}
+
+function drawCoverPlaceholder(page, logo, font) {
+  // Remove the original vendor artwork and replace it with a Dump4Exam panel.
+  cover(page, { x: 225, top: 16, width: 360, height: 292 });
+  const panel = scaleBox(page, { x: 315, top: 70, width: 205, height: 184 });
+  page.drawRectangle({ ...panel, color: rgb(0.06, 0.09, 0.15), borderColor: rgb(0.08, 0.58, 0.84), borderWidth: 1 });
+  page.drawRectangle({ x: panel.x, y: panel.y + panel.height - 7, width: panel.width, height: 7, color: rgb(1, 0.45, 0.05) });
+  placeLogo(page, logo, { x: 340, top: 94, width: 155, height: 30 });
+  drawCenteredText(page, font, 'PRACTICE WITH CONFIDENCE', panel.x + panel.width / 2, panel.y + 83, 7, rgb(1, 1, 1));
+  drawCenteredText(page, font, 'Updated exam material', panel.x + panel.width / 2, panel.y + 58, 8, rgb(0.76, 0.84, 0.92));
+  drawCenteredText(page, font, 'Clear explanations', panel.x + panel.width / 2, panel.y + 40, 8, rgb(0.76, 0.84, 0.92));
+  drawCenteredText(page, font, 'Study at your pace', panel.x + panel.width / 2, panel.y + 22, 8, rgb(0.76, 0.84, 0.92));
+}
+
+function drawAboutPlaceholder(page, logo, font) {
+  // Replace the original testimonial collage with a Dump4Exam panel.
+  cover(page, { x: 300, top: 0, width: 295, height: 421 });
+  const panel = scaleBox(page, { x: 306, top: 0, width: 289, height: 421 });
+  page.drawRectangle({ ...panel, color: rgb(0.06, 0.09, 0.15) });
+  page.drawRectangle({ x: panel.x, y: panel.y + panel.height - 8, width: panel.width, height: 8, color: rgb(1, 0.45, 0.05) });
+  placeLogo(page, logo, { x: 355, top: 67, width: 190, height: 38 });
+  drawCenteredText(page, font, 'DUMP4EXAM STUDY SPACE', panel.x + panel.width / 2, panel.y + 224, 13, rgb(1, 1, 1));
+  drawCenteredText(page, font, 'Focused practice. Clear progress.', panel.x + panel.width / 2, panel.y + 196, 9, rgb(0.72, 0.81, 0.9));
   [
-    'Passed my exam today with 891',
-    'marks. Out of 52 questions, 51',
-    'were from Dump4Pass PDFs including',
-    'Contoso case study.',
-    'Thank you Dump4Pass team!',
-  ].forEach((line, index) => page.drawText(line, {
-    x: target.x + 2,
-    y: target.y + target.height - 8 - index * 10,
-    size: 6.6,
-    font,
-    color: rgb(0.9, 0.9, 0.9),
-  }));
+    ['Practice questions', 157],
+    ['Detailed explanations', 125],
+    ['Updated learning material', 93],
+  ].forEach(([label, offset]) => {
+    page.drawRectangle({ x: panel.x + 48, y: panel.y + offset - 4, width: 7, height: 7, color: rgb(0.08, 0.62, 0.86) });
+    drawCenteredText(page, font, label, panel.x + panel.width / 2 + 16, panel.y + offset - 5, 9, rgb(1, 1, 1));
+  });
 }
 
 function annotationUri(annotation) {
@@ -139,34 +157,35 @@ function drawCover(page, pdf, logo, font, url) {
   // The CertyIQ cover has two separate logo placements and one website address.
   cover(page, { x: 20, top: 18, width: 62, height: 62 });
   placeLogo(page, logo, { x: 25, top: 23, width: 52, height: 48 });
+  drawCoverPlaceholder(page, logo, font);
   cover(page, { x: 25, top: 255, width: 175, height: 40 });
   placeLogo(page, logo, { x: 28, top: 260, width: 165, height: 27 });
-  replaceText(page, font, 'Get certification quickly with the Dump4Pass premium exam material.', { x: 32, top: 350, width: 350, height: 13 }, 7);
+  replaceText(page, font, 'Get certification quickly with the Dump4Exam premium exam material.', { x: 32, top: 350, width: 350, height: 13 }, 7);
   replaceText(page, font, url, { x: 32, top: 388, width: 250, height: 14 }, 8, rgb(0, 0.6, 0.8));
   addUriLink(page, pdf, { x: 32, top: 388, width: 250, height: 14 }, url);
 }
 
-function drawAbout(page, pdf, font, url, email) {
+function drawAbout(page, pdf, logo, font, url, email) {
   const orange = rgb(1, 0.44, 0.02);
   // Rebuild the left-hand introduction so no visible CertyIQ references remain.
-  drawLines(page, font, ['About Dump4Pass'], { x: 34, top: 29, width: 270, height: 22 }, 15, 16);
+  drawLines(page, font, ['About Dump4Exam'], { x: 34, top: 29, width: 270, height: 22 }, 15, 16);
   page.drawLine({ start: { x: 34, y: page.getHeight() - 55 }, end: { x: 160, y: page.getHeight() - 55 }, thickness: 1.3, color: orange });
   drawLines(page, font, [
-    "We here at Dump4Pass eventually got enough of the industry's greedy exam",
+    "We here at Dump4Exam eventually got enough of the industry's greedy exam",
     'paid for. Our team of IT professionals comes with years of experience in',
-    'the IT industry. Prior to training Dump4Pass we worked in test areas where we',
+    'the IT industry. Prior to training Dump4Exam we worked in test areas where we',
     'observed the horrors of the paywall exam preparation system.',
     '',
     'The misuse of the preparation system has left our team disillusioned.',
     'And for that reason, we decided it was time to make a difference. We had',
-    'to make in this way. Dump4Pass was created to provide quality materials',
+    'to make in this way. Dump4Exam was created to provide quality materials',
     'without stealing from everyday people who are trying to make a living.',
   ], { x: 35, top: 64, width: 270, height: 98 }, 6.7, 10);
   replaceText(page, font, url, { x: 35, top: 232, width: 205, height: 14 }, 7, rgb(0, 0.6, 0.8));
   replaceText(page, font, `Mail us on - ${email}`, { x: 35, top: 250, width: 240, height: 14 }, 7, rgb(0, 0.6, 0.8));
   addUriLink(page, pdf, { x: 35, top: 232, width: 205, height: 14 }, url);
   addUriLink(page, pdf, { x: 35, top: 250, width: 240, height: 14 }, `mailto:${email}`);
-  replaceDarkReviewText(page, font);
+  drawAboutPlaceholder(page, logo, font);
 }
 
 function drawPaperLink(page, pdf, font, url, baseline) {
@@ -224,7 +243,7 @@ async function main() {
   const questionHeaderBrands = await findQuestionHeaderBrands(sourceBytes, pages.length);
   for (const page of pages) removeCertyIqLinks(page, pdf);
   if (pages[0]) drawCover(pages[0], pdf, logo, font, args.url);
-  if (pages[1]) drawAbout(pages[1], pdf, font, args.url, args.email);
+  if (pages[1]) drawAbout(pages[1], pdf, logo, font, args.url, args.email);
   pages.forEach((page, index) => questionHeaderBrands[index]?.forEach(header => drawQuestionHeaderBrand(page, logo, header)));
   if (pages[2]) drawPaperLink(pages[2], pdf, font, args.url, 20);
   if (pages.at(-1)) {

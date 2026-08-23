@@ -25,10 +25,11 @@ Start the local app:
 npm start
 ```
 
-Open `http://localhost:3000`, select the PDF and the Dump4Exam PNG, then choose
-**Transform and download**. The browser downloads the completed PDF
+Open `http://localhost:3000`, select the PDF, then choose **Transform and download**. The bundled
+Dump4Exam logo is used automatically. Upload a replacement PNG only when the logo changes. The browser downloads the completed PDF
 automatically. Nothing is uploaded to a remote server, and no Poppler setup is
-needed.
+needed. Both forms include editable website and support-email fields, defaulting
+to `https://dump4exam.vercel.app/` and `Dump4Exam@gmail.com`.
 
 ## Command-line use
 
@@ -40,13 +41,16 @@ that cannot be repaired.
 ```powershell
 npm run transform -- `
   --input "C:\Users\princ\Downloads\PassLeader-400_Latest.pdf" `
-  --logo "C:\Users\princ\OneDrive\Pictures\Screenshots\Screenshot 2026-08-15 200914.png" `
+  --url "https://dump4exam.vercel.app/" `
+  --email "Dump4Exam@gmail.com" `
   --output ".\output\PL-400-Dump4Exam.pdf"
 ```
 
 The fallback preserves the visual page appearance but makes source text
 non-selectable and form fields non-interactive. It does not bypass passwords or
 permissions.
+
+Add `--logo "C:\path\to\replacement-logo.png"` only when you need to override the bundled Dump4Exam logo.
 
 ## Adjusting placement
 
@@ -55,22 +59,23 @@ top edge of a 612 x 792 Letter page. Tweak only the coordinate blocks in the
 `pages.forEach` loop if a future PDF uses a different template. Add
 `--all-pages` only when page 2 should also receive a header logo.
 
-## CertyIQ to Dump4Pass
+## CertyIQ to Dump4Exam
 
 The local page now includes a second form for the supplied CertyIQ A5 exam-PDF layout. Upload
-the CertyIQ PDF and a **Dump4Pass PNG logo**, then set the target website and support email.
-It replaces the CertyIQ cover and information-page branding, removes CertyIQ hyperlinks, and
-updates the title/closing-page links. The result remains a searchable vector PDF.
+the CertyIQ PDF and a **Dump4Exam PNG logo**, then set the target website and support email.
+It replaces the CertyIQ cover and information-page branding, including the original vendor
+artwork and testimonial collage, with Dump4Exam placeholder panels. It also removes CertyIQ
+hyperlinks and updates the title/closing-page links. The result remains a searchable vector PDF.
 
 Use the form at `http://localhost:3000`, or run it directly:
 
 ```powershell
 npm run transform:certyiq -- `
   --input "C:\path\to\CertIQ.pdf" `
-  --logo "C:\path\to\Dump4Pass.png" `
-  --url "https://your-site.example/" `
-  --email "support@your-site.example" `
-  --output ".\output\CertIQ-Dump4Pass.pdf"
+  --logo "C:\path\to\Dump4Exam.png" `
+  --url "https://dump4exam.vercel.app/" `
+  --email "Dump4Exam@gmail.com" `
+  --output ".\output\CertIQ-Dump4Exam.pdf"
 ```
 
 ## Important

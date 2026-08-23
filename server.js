@@ -26,8 +26,8 @@ const page = `<!doctype html>
 <title>PDF brand transformer</title>
 <style>body{font-family:Arial,sans-serif;max-width:720px;margin:64px auto;padding:0 20px;color:#151515}h1{margin-bottom:8px}.transform-form{display:grid;gap:16px;margin-top:28px;padding:24px;border:1px solid #ddd;border-radius:12px}label{display:grid;gap:7px;font-weight:700}input,button{font:inherit}button{background:#111;color:#fff;border:0;border-radius:7px;padding:11px 16px;cursor:pointer}button:disabled{opacity:.55;cursor:wait}.status{min-height:24px;color:#444}.note{color:#666;font-size:.92rem}h2{margin:40px 0 0}</style>
 </head><body><h1>PDF brand transformer</h1><p>Select the matching source type below. The transformed PDF downloads automatically.</p>
-<h2>PassLeader to Dump4Exam</h2><form class="transform-form" data-endpoint="/transform" data-brand="Dump4Exam"><label>Source PDF<input name="pdf" type="file" accept="application/pdf,.pdf" required></label><label>Dump4Exam logo (PNG)<input name="logo" type="file" accept="image/png,.png" required></label><button>Transform and download</button><div class="status" aria-live="polite"></div></form>
-<h2>CertyIQ to Dump4Pass</h2><form class="transform-form" data-endpoint="/transform-certyiq" data-brand="Dump4Pass"><label>CertyIQ source PDF<input name="pdf" type="file" accept="application/pdf,.pdf" required></label><label>Dump4Pass logo (PNG)<input name="logo" type="file" accept="image/png,.png" required></label><label>Dump4Pass website URL<input name="url" type="url" value="https://dump4pass.com/" required></label><label>Support email<input name="email" type="email" value="support@dump4pass.com" required></label><button>Transform and download</button><div class="status" aria-live="polite"></div></form><p class="note">Files stay on this computer. Upload a PNG logo for the selected brand.</p>
+<h2>PassLeader to Dump4Exam</h2><form class="transform-form" data-endpoint="/transform" data-brand="Dump4Exam"><label>Source PDF<input name="pdf" type="file" accept="application/pdf,.pdf" required></label><label>Replacement logo (PNG, optional)<input name="logo" type="file" accept="image/png,.png"></label><label>Dump4Exam website URL<input name="url" type="url" value="https://dump4exam.vercel.app/" required></label><label>Support email<input name="email" type="email" value="Dump4Exam@gmail.com" required></label><button>Transform and download</button><div class="status" aria-live="polite"></div></form>
+<h2>CertyIQ to Dump4Exam</h2><form class="transform-form" data-endpoint="/transform-certyiq" data-brand="Dump4Exam"><label>CertyIQ source PDF<input name="pdf" type="file" accept="application/pdf,.pdf" required></label><label>Replacement logo (PNG, optional)<input name="logo" type="file" accept="image/png,.png"></label><label>Dump4Exam website URL<input name="url" type="url" value="https://dump4exam.vercel.app/" required></label><label>Support email<input name="email" type="email" value="Dump4Exam@gmail.com" required></label><button>Transform and download</button><div class="status" aria-live="polite"></div></form><p class="note">The included Dump4Exam logo is used automatically. Upload a replacement PNG only when the logo changes.</p>
 <script>
 document.querySelectorAll('.transform-form').forEach(form=>{const button=form.querySelector('button'),status=form.querySelector('.status');form.addEventListener('submit',async event=>{event.preventDefault();button.disabled=true;status.textContent='Transforming - keep this tab open...';try{const response=await fetch(form.dataset.endpoint,{method:'POST',body:new FormData(form)});if(!response.ok)throw new Error(await response.text());const blob=await response.blob(),url=URL.createObjectURL(blob),download=document.createElement('a'),source=form.elements.pdf.files[0];download.href=url;download.download=(source.name||'document.pdf').replace(/\\.pdf$/i,'')+'-'+form.dataset.brand+'.pdf';download.click();URL.revokeObjectURL(url);status.textContent='Done - your download has started.'}catch(error){status.textContent='Error: '+error.message}finally{button.disabled=false}})});
 </script></body></html>`;
@@ -44,15 +44,16 @@ app.post('/transform', upload.fields([{ name: 'pdf', maxCount: 1 }, { name: 'log
   try {
     const pdf = request.files?.pdf?.[0];
     const logo = request.files?.logo?.[0];
-    if (!pdf || !logo) throw new Error('Select both a PDF and a PNG logo.');
+    if (!pdf) throw new Error('Select a source PDF.');
 
     folder = await mkdtemp(path.join(tmpdir(), 'dump4exam-'));
     const input = path.join(folder, 'input.pdf');
     const logoPath = path.join(folder, 'logo.png');
     const output = path.join(folder, 'Dump4Exam.pdf');
-    await Promise.all([writeFile(input, pdf.buffer), writeFile(logoPath, logo.buffer)]);
+    await Promise.all([writeFile(input, pdf.buffer), ...(logo ? [writeFile(logoPath, logo.buffer)] : [])]);
 
-    const args = [path.join(appDirectory, 'transform.js'), '--input', input, '--logo', logoPath, '--output', output];
+    const args = [path.join(appDirectory, 'transform.js'), '--input', input, '--output', output, '--url', request.body.url, '--email', request.body.email];
+    if (logo) args.push('--logo', logoPath);
     await execFileAsync(process.execPath, args, { windowsHide: true, maxBuffer: 1024 * 1024 });
 
     response.download(output, outputName(pdf.originalname, 'Dump4Exam'), async (error) => {
@@ -70,18 +71,19 @@ app.post('/transform-certyiq', upload.fields([{ name: 'pdf', maxCount: 1 }, { na
   try {
     const pdf = request.files?.pdf?.[0];
     const logo = request.files?.logo?.[0];
-    if (!pdf || !logo) throw new Error('Select both a CertyIQ PDF and a Dump4Pass PNG logo.');
+    if (!pdf) throw new Error('Select a CertyIQ PDF.');
 
-    folder = await mkdtemp(path.join(tmpdir(), 'dump4pass-'));
+    folder = await mkdtemp(path.join(tmpdir(), 'certyiq-dump4exam-'));
     const input = path.join(folder, 'input.pdf');
     const logoPath = path.join(folder, 'logo.png');
-    const output = path.join(folder, 'Dump4Pass.pdf');
-    await Promise.all([writeFile(input, pdf.buffer), writeFile(logoPath, logo.buffer)]);
+    const output = path.join(folder, 'Dump4Exam.pdf');
+    await Promise.all([writeFile(input, pdf.buffer), ...(logo ? [writeFile(logoPath, logo.buffer)] : [])]);
 
-    const args = [path.join(appDirectory, 'transform-certyiq.js'), '--input', input, '--logo', logoPath, '--output', output, '--url', request.body.url, '--email', request.body.email];
+    const args = [path.join(appDirectory, 'transform-certyiq.js'), '--input', input, '--output', output, '--url', request.body.url, '--email', request.body.email];
+    if (logo) args.push('--logo', logoPath);
     await execFileAsync(process.execPath, args, { windowsHide: true, maxBuffer: 1024 * 1024 });
 
-    response.download(output, outputName(pdf.originalname, 'Dump4Pass'), async (error) => {
+    response.download(output, outputName(pdf.originalname, 'Dump4Exam'), async (error) => {
       await rm(folder, { recursive: true, force: true });
       if (error && !response.headersSent) next(error);
     });

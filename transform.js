@@ -9,14 +9,16 @@ import createQpdf from '@neslinesli93/qpdf-wasm';
 const require = createRequire(import.meta.url);
 const { PDFDocument, StandardFonts, rgb, PDFName, PDFArray, PDFDict, PDFString, PDFHexString } = require('pdf-lib');
 const moduleDirectory = path.dirname(fileURLToPath(import.meta.url));
-const DUMP4EXAM_URL = 'https://dump4exam.vercel.app/';
+const DEFAULT_DUMP4EXAM_URL = 'https://dump4exam.vercel.app/';
+const DEFAULT_DUMP4EXAM_EMAIL = 'Dump4Exam@gmail.com';
+const DEFAULT_LOGO_PATH = path.join(moduleDirectory, 'assets', 'dump4exam.png');
 
 const LETTER = { width: 612, height: 792 };
 
 function usage(message) {
   if (message) console.error(`Error: ${message}\n`);
   console.error(`Usage:
-  npm run transform -- --input <source.pdf> --logo <dump4exam.png> --output <result.pdf>
+  npm run transform -- --input <source.pdf> --output <result.pdf> [--logo <replacement.png>] [--url <website>] [--email <address>]
 
 Options:
   --all-pages                 Put the replacement header on every page (including page 2).
@@ -31,14 +33,14 @@ The built-in coordinates are tuned for the supplied Letter-size PassLeader PDF.`
 }
 
 function parseArgs(argv) {
-  const values = { allPages: false, ignoreEncryption: false, rasterize: false, dpi: 120, jpegQuality: 65 };
+  const values = { allPages: false, ignoreEncryption: false, rasterize: false, dpi: 120, jpegQuality: 65, url: DEFAULT_DUMP4EXAM_URL, email: DEFAULT_DUMP4EXAM_EMAIL, logo: DEFAULT_LOGO_PATH };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     if (arg === '--help') return { help: true };
     if (arg === '--all-pages') { values.allPages = true; continue; }
     if (arg === '--ignore-encryption') { values.ignoreEncryption = true; continue; }
     if (arg === '--rasterize') { values.rasterize = true; continue; }
-    if (!['--input', '--logo', '--output', '--dpi', '--jpeg-quality'].includes(arg)) return { error: `Unknown option: ${arg}` };
+    if (!['--input', '--logo', '--output', '--dpi', '--jpeg-quality', '--url', '--email'].includes(arg)) return { error: `Unknown option: ${arg}` };
     const value = argv[index + 1];
     if (!value || value.startsWith('--')) return { error: `Missing value for ${arg}` };
     if (arg === '--dpi') values.dpi = Number(value);
@@ -46,11 +48,18 @@ function parseArgs(argv) {
     else values[arg.slice(2)] = value;
     index += 1;
   }
-  for (const key of ['input', 'logo', 'output']) {
+  for (const key of ['input', 'output']) {
     if (!values[key]) return { error: `Missing --${key}` };
   }
   if (!Number.isInteger(values.dpi) || values.dpi < 72 || values.dpi > 300) return { error: '--dpi must be an integer between 72 and 300' };
   if (!Number.isInteger(values.jpegQuality) || values.jpegQuality < 50 || values.jpegQuality > 95) return { error: '--jpeg-quality must be an integer between 50 and 95' };
+  try {
+    const website = new URL(values.url);
+    if (!['http:', 'https:'].includes(website.protocol)) throw new Error();
+  } catch {
+    return { error: '--url must be an http(s) URL' };
+  }
+  if (!/^\S+@\S+\.\S+$/.test(values.email)) return { error: '--email must be a valid email address' };
   return values;
 }
 
@@ -135,9 +144,9 @@ function addUriLink(page, pdf, box, url) {
   annotations.push(reference);
 }
 
-function drawFooter(page, pdf, font) {
+function drawFooter(page, pdf, font, websiteUrl) {
   const line = { x: 88, top: 733, width: 385, height: 20 };
-  const url = { x: 88, top: 757, width: 165, height: 19 };
+  const urlBox = { x: 88, top: 757, width: 165, height: 19 };
   const placement = scaleBox(page, line);
   const textY = placement.y + (placement.height - 10) / 2;
   const prefix = 'Get Latest & Actual ';
@@ -153,10 +162,10 @@ function drawFooter(page, pdf, font) {
   page.drawLine({ start: { x: codeX, y: textY - 1 }, end: { x: codeX + codeWidth, y: textY - 1 }, thickness: 0.5, color: blue });
   page.drawText(suffix, { x: codeX + codeWidth, y: textY, size: 10, font });
 
-  replaceText(page, font, { ...url, value: DUMP4EXAM_URL, size: 9, color: blue });
+  replaceText(page, font, { ...urlBox, value: websiteUrl, size: 9, color: blue });
   const standardCodeX = line.x + font.widthOfTextAtSize(prefix, 10);
-  addUriLink(page, pdf, { x: standardCodeX, top: line.top, width: codeWidth, height: line.height }, DUMP4EXAM_URL);
-  addUriLink(page, pdf, url, DUMP4EXAM_URL);
+  addUriLink(page, pdf, { x: standardCodeX, top: line.top, width: codeWidth, height: line.height }, websiteUrl);
+  addUriLink(page, pdf, urlBox, websiteUrl);
 }
 
 async function main() {
@@ -272,7 +281,7 @@ async function main() {
     removePassLeaderLinks(page, pdf);
 
     if (pageNumber >= 3) {
-      drawFooter(page, pdf, font);
+      drawFooter(page, pdf, font, args.url);
     }
   });
 
@@ -280,7 +289,7 @@ async function main() {
   if (pages.length >= 2) {
     replaceText(pages[1], font, {
       x: 88, top: 373, width: 390, height: 21,
-      value: 'Dump4Exam@gmail.com and our technical experts will provide support in 24 hours.', size: 10,
+      value: `${args.email} and our technical experts will provide support in 24 hours.`, size: 10,
       color: rgb(0, 0, 1),
     });
   }
