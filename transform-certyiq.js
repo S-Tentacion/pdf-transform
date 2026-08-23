@@ -154,38 +154,97 @@ function addUriLink(page, pdf, box, url) {
 }
 
 function drawCover(page, pdf, logo, font, url) {
-  // The CertyIQ cover has two separate logo placements and one website address.
-  cover(page, { x: 20, top: 18, width: 62, height: 62 });
-  placeLogo(page, logo, { x: 25, top: 23, width: 52, height: 48 });
-  drawCoverPlaceholder(page, logo, font);
-  cover(page, { x: 25, top: 255, width: 175, height: 40 });
-  placeLogo(page, logo, { x: 28, top: 260, width: 165, height: 27 });
-  replaceText(page, font, 'Get certification quickly with the Dump4Exam premium exam material.', { x: 32, top: 350, width: 350, height: 13 }, 7);
-  replaceText(page, font, url, { x: 32, top: 388, width: 250, height: 14 }, 8, rgb(0, 0.6, 0.8));
-  addUriLink(page, pdf, { x: 32, top: 388, width: 250, height: 14 }, url);
+  const { width, height } = page.getSize();
+  const navy = rgb(0.06, 0.09, 0.15);
+  const blue = rgb(0.08, 0.62, 0.86);
+  const orange = rgb(1, 0.45, 0.05);
+
+  page.drawRectangle({ x: 0, y: 0, width, height, color: rgb(1, 1, 1) });
+  page.drawRectangle({ x: 0, y: 0, width: 162, height, color: navy });
+  page.drawCircle({ x: 44, y: height - 54, size: 22, color: blue, opacity: 0.35 });
+  page.drawCircle({ x: 122, y: 42, size: 48, color: orange, opacity: 0.22 });
+  page.drawRectangle({ x: 195, y: height - 78, width: 54, height: 6, color: orange });
+  page.drawRectangle({ x: 195, y: height - 90, width: 118, height: 4, color: blue });
+  page.drawRectangle({ x: 29, y: height - 102, width: 103, height: 42, color: rgb(1, 1, 1) });
+  placeNativeLogo(page, logo, { x: 38, top: 68, width: 85, height: 26 });
+
+  page.drawText('PREMIUM EXAM', { x: 29, y: height - 154, size: 11, font, color: rgb(1, 1, 1) });
+  page.drawText('PREPARATION', { x: 29, y: height - 171, size: 11, font, color: rgb(1, 1, 1) });
+  page.drawText('Built for focused practice', { x: 29, y: 74, size: 8, font, color: rgb(0.75, 0.84, 0.92) });
+  page.drawText('and confident exam day.', { x: 29, y: 61, size: 8, font, color: rgb(0.75, 0.84, 0.92) });
+
+  page.drawText('Microsoft Power Platform', { x: 195, y: height - 145, size: 12, font, color: rgb(0.17, 0.2, 0.25) });
+  page.drawText('Functional Consultant', { x: 195, y: height - 166, size: 12, font, color: rgb(0.17, 0.2, 0.25) });
+  page.drawText('PL-200', { x: 195, y: height - 224, size: 34, font, color: navy });
+  page.drawText('Your structured guide for practice questions,', { x: 195, y: height - 257, size: 10, font, color: rgb(0.35, 0.4, 0.47) });
+  page.drawText('clear explanations, and steady progress.', { x: 195, y: height - 273, size: 10, font, color: rgb(0.35, 0.4, 0.47) });
+  page.drawRectangle({ x: 195, y: 72, width: 260, height: 44, color: rgb(0.94, 0.97, 0.99) });
+  page.drawText('Practice  •  Learn  •  Succeed', { x: 216, y: 88, size: 12, font, color: navy });
+  page.drawText(url, { x: 195, y: 38, size: 8, font, color: blue });
+  addUriLink(page, pdf, { x: 195, top: height - 49, width: 200, height: 15 }, url);
 }
 
 function drawAbout(page, pdf, logo, font, url, email) {
-  const orange = rgb(1, 0.44, 0.02);
-  // Rebuild the left-hand introduction so no visible CertyIQ references remain.
-  drawLines(page, font, ['About Dump4Exam'], { x: 34, top: 29, width: 270, height: 22 }, 15, 16);
-  page.drawLine({ start: { x: 34, y: page.getHeight() - 55 }, end: { x: 160, y: page.getHeight() - 55 }, thickness: 1.3, color: orange });
-  drawLines(page, font, [
-    "We here at Dump4Exam eventually got enough of the industry's greedy exam",
-    'paid for. Our team of IT professionals comes with years of experience in',
-    'the IT industry. Prior to training Dump4Exam we worked in test areas where we',
-    'observed the horrors of the paywall exam preparation system.',
-    '',
-    'The misuse of the preparation system has left our team disillusioned.',
-    'And for that reason, we decided it was time to make a difference. We had',
-    'to make in this way. Dump4Exam was created to provide quality materials',
-    'without stealing from everyday people who are trying to make a living.',
-  ], { x: 35, top: 64, width: 270, height: 98 }, 6.7, 10);
-  replaceText(page, font, url, { x: 35, top: 232, width: 205, height: 14 }, 7, rgb(0, 0.6, 0.8));
-  replaceText(page, font, `Mail us on - ${email}`, { x: 35, top: 250, width: 240, height: 14 }, 7, rgb(0, 0.6, 0.8));
-  addUriLink(page, pdf, { x: 35, top: 232, width: 205, height: 14 }, url);
-  addUriLink(page, pdf, { x: 35, top: 250, width: 240, height: 14 }, `mailto:${email}`);
-  drawAboutPlaceholder(page, logo, font);
+  const { width, height } = page.getSize();
+  const navy = rgb(0.06, 0.09, 0.15);
+  const blue = rgb(0.08, 0.62, 0.86);
+  const orange = rgb(1, 0.45, 0.05);
+
+  page.drawRectangle({ x: 0, y: 0, width, height, color: rgb(1, 1, 1) });
+  page.drawRectangle({ x: 0, y: height - 76, width, height: 76, color: navy });
+  page.drawRectangle({ x: 38, y: height - 58, width: 102, height: 33, color: rgb(1, 1, 1) });
+  placeNativeLogo(page, logo, { x: 47, top: 32, width: 84, height: 20 });
+  page.drawText('ABOUT DUMP4EXAM', { x: 174, y: height - 47, size: 17, font, color: rgb(1, 1, 1) });
+  page.drawRectangle({ x: 39, y: height - 119, width: 54, height: 5, color: orange });
+  page.drawText('Study smarter. Build confidence. Be ready.', { x: 39, y: height - 147, size: 18, font, color: navy });
+  page.drawText('Dump4Exam brings exam preparation into one focused space.', { x: 39, y: height - 176, size: 9, font, color: rgb(0.34, 0.39, 0.46) });
+  page.drawText('Use practice material to identify gaps, learn from explanations,', { x: 39, y: height - 192, size: 9, font, color: rgb(0.34, 0.39, 0.46) });
+  page.drawText('and progress toward exam day with clarity.', { x: 39, y: height - 208, size: 9, font, color: rgb(0.34, 0.39, 0.46) });
+
+  const cards = [
+    ['01', 'Practice', 'Work through focused', 'exam-style questions.'],
+    ['02', 'Understand', 'Use explanations to', 'strengthen weak areas.'],
+    ['03', 'Progress', 'Build momentum at', 'your own pace.'],
+  ];
+  cards.forEach(([number, title, lineOne, lineTwo], index) => {
+    const x = 39 + index * 175;
+    page.drawRectangle({ x, y: 91, width: 151, height: 104, color: rgb(0.95, 0.97, 0.99), borderColor: rgb(0.84, 0.9, 0.95), borderWidth: 0.6 });
+    page.drawRectangle({ x, y: 176, width: 151, height: 19, color: index === 1 ? orange : blue });
+    page.drawText(number, { x: x + 12, y: 181, size: 8, font, color: rgb(1, 1, 1) });
+    page.drawText(title, { x: x + 12, y: 152, size: 12, font, color: navy });
+    page.drawText(lineOne, { x: x + 12, y: 130, size: 8, font, color: rgb(0.34, 0.39, 0.46) });
+    page.drawText(lineTwo, { x: x + 12, y: 117, size: 8, font, color: rgb(0.34, 0.39, 0.46) });
+  });
+  page.drawText(url, { x: 39, y: 43, size: 8, font, color: blue });
+  page.drawText(email, { x: 39, y: 27, size: 8, font, color: blue });
+  addUriLink(page, pdf, { x: 39, top: height - 54, width: 210, height: 14 }, url);
+  addUriLink(page, pdf, { x: 39, top: height - 38, width: 210, height: 14 }, `mailto:${email}`);
+}
+
+function drawThankYouPage(page, logo, font, url, email) {
+  const { width, height } = page.getSize();
+  const navy = rgb(0.06, 0.09, 0.15);
+  const blue = rgb(0.08, 0.62, 0.86);
+  const orange = rgb(1, 0.45, 0.05);
+  page.drawRectangle({ x: 0, y: 0, width, height, color: rgb(1, 1, 1) });
+  page.drawRectangle({ x: 0, y: 0, width: 74, height, color: navy });
+  page.drawCircle({ x: 37, y: height - 92, size: 22, color: blue, opacity: 0.4 });
+  page.drawCircle({ x: 37, y: 70, size: 33, color: orange, opacity: 0.35 });
+  page.drawRectangle({ x: 163, y: height - 126, width: 270, height: 47, color: rgb(1, 1, 1) });
+  placeNativeLogo(page, logo, { x: 188, top: 92, width: 220, height: 30 });
+  drawCenteredText(page, font, 'THANK YOU', width / 2 + 32, height - 218, 31, navy);
+  drawCenteredText(page, font, 'Best wishes for your exam.', width / 2 + 32, height - 252, 15, orange);
+  drawCenteredText(page, font, 'You have put in the effort. Stay focused, trust your preparation,', width / 2 + 32, height - 298, 10, rgb(0.34, 0.39, 0.46));
+  drawCenteredText(page, font, 'and take the next step with confidence.', width / 2 + 32, height - 316, 10, rgb(0.34, 0.39, 0.46));
+  page.drawRectangle({ x: 146, y: height - 454, width: 342, height: 108, color: rgb(0.95, 0.97, 0.99) });
+  ['Review key topics', 'Stay calm and focused', 'Believe in your progress'].forEach((label, index) => {
+    const y = height - 382 - index * 27;
+    page.drawCircle({ x: 178, y: y + 3, size: 6, color: index === 1 ? orange : blue });
+    page.drawText(label, { x: 195, y, size: 11, font, color: navy });
+  });
+  drawCenteredText(page, font, 'Practice • Learn • Succeed', width / 2 + 32, 105, 14, navy);
+  drawCenteredText(page, font, url, width / 2 + 32, 76, 9, blue);
+  drawCenteredText(page, font, email, width / 2 + 32, 57, 9, blue);
 }
 
 function drawPaperLink(page, pdf, font, url, baseline) {
@@ -246,11 +305,7 @@ async function main() {
   if (pages[1]) drawAbout(pages[1], pdf, logo, font, args.url, args.email);
   pages.forEach((page, index) => questionHeaderBrands[index]?.forEach(header => drawQuestionHeaderBrand(page, logo, header)));
   if (pages[2]) drawPaperLink(pages[2], pdf, font, args.url, 20);
-  if (pages.at(-1)) {
-    replaceText(pages.at(-1), font, `Mail us - ${args.email}`, { x: 231, top: 319, width: 155, height: 24 }, 7, rgb(0.3, 0.65, 0.38));
-    addUriLink(pages.at(-1), pdf, { x: 231, top: 319, width: 155, height: 24 }, `mailto:${args.email}`);
-    drawPaperLink(pages.at(-1), pdf, font, args.url, 20);
-  }
+  if (pages.at(-1)) drawThankYouPage(pages.at(-1), logo, font, args.url, args.email);
   await mkdir(path.dirname(path.resolve(args.output)), { recursive: true });
   await writeFile(args.output, await pdf.save({ useObjectStreams: true }));
   console.log(`Wrote ${args.output} (${pages.length} pages).`);

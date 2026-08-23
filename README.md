@@ -65,7 +65,8 @@ The local page now includes a second form for the supplied CertyIQ A5 exam-PDF l
 the CertyIQ PDF and a **Dump4Exam PNG logo**, then set the target website and support email.
 It replaces the CertyIQ cover and information-page branding, including the original vendor
 artwork and testimonial collage, with Dump4Exam placeholder panels. It also removes CertyIQ
-hyperlinks and updates the title/closing-page links. The result remains a searchable vector PDF.
+hyperlinks and updates the title/closing-page links. It also creates a new Dump4Exam intro page,
+about page, and thank-you/best-wishes closing page. The result remains a searchable vector PDF.
 
 Use the form at `http://localhost:3000`, or run it directly:
 
