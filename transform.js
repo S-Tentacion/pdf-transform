@@ -7,7 +7,7 @@ import { createCanvas, DOMMatrix, ImageData, Path2D } from '@napi-rs/canvas';
 import createQpdf from '@neslinesli93/qpdf-wasm';
 
 const require = createRequire(import.meta.url);
-const { PDFDocument, StandardFonts, rgb, PDFName, PDFArray, PDFDict, PDFString, PDFHexString } = require('pdf-lib');
+const { PDFDocument, StandardFonts, rgb, PDFName, PDFArray, PDFDict, PDFString, PDFHexString, pushGraphicsState, popGraphicsState, rectangle, clip, endPath } = require('pdf-lib');
 const moduleDirectory = path.dirname(fileURLToPath(import.meta.url));
 const DEFAULT_DUMP4EXAM_URL = 'https://dump4exam.vercel.app/';
 const DEFAULT_DUMP4EXAM_EMAIL = 'Dump4Exam@gmail.com';
@@ -83,14 +83,23 @@ function placeLogo(page, logo, box) {
   const target = scaleBox(page, box);
   const logoRatio = logo.width / logo.height;
   const targetRatio = target.width / target.height;
-  const width = targetRatio > logoRatio ? target.height * logoRatio : target.width;
-  const height = targetRatio > logoRatio ? target.height : target.width / logoRatio;
+  // Fill the existing PassLeader logo bands with the center of the new badge.
+  // Clipping keeps the larger source artwork inside the cleared rectangle.
+  const width = targetRatio > logoRatio ? target.width : target.height * logoRatio;
+  const height = targetRatio > logoRatio ? target.width / logoRatio : target.height;
+  page.pushOperators(
+    pushGraphicsState(),
+    rectangle(target.x, target.y, target.width, target.height),
+    clip(),
+    endPath(),
+  );
   page.drawImage(logo, {
     x: target.x + (target.width - width) / 2,
     y: target.y + (target.height - height) / 2,
     width,
     height,
   });
+  page.pushOperators(popGraphicsState());
 }
 
 function replaceText(page, font, { x, top, width, height, value, size, color = rgb(0, 0, 0) }) {

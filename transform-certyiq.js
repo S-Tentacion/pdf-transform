@@ -165,11 +165,11 @@ function drawCover(page, pdf, logo, font, url) {
   page.drawCircle({ x: 122, y: 42, size: 48, color: orange, opacity: 0.22 });
   page.drawRectangle({ x: 195, y: height - 78, width: 54, height: 6, color: orange });
   page.drawRectangle({ x: 195, y: height - 90, width: 118, height: 4, color: blue });
-  page.drawRectangle({ x: 29, y: height - 102, width: 103, height: 42, color: rgb(1, 1, 1) });
-  placeNativeLogo(page, logo, { x: 38, top: 68, width: 85, height: 26 });
+  page.drawRectangle({ x: 22, y: height - 140, width: 120, height: 106, color: rgb(1, 1, 1) });
+  placeNativeLogo(page, logo, { x: 28, top: 39, width: 108, height: 96 });
 
-  page.drawText('PREMIUM EXAM', { x: 29, y: height - 154, size: 11, font, color: rgb(1, 1, 1) });
-  page.drawText('PREPARATION', { x: 29, y: height - 171, size: 11, font, color: rgb(1, 1, 1) });
+  page.drawText('PREMIUM EXAM', { x: 29, y: height - 169, size: 11, font, color: rgb(1, 1, 1) });
+  page.drawText('PREPARATION', { x: 29, y: height - 186, size: 11, font, color: rgb(1, 1, 1) });
   page.drawText('Built for focused practice', { x: 29, y: 74, size: 8, font, color: rgb(0.75, 0.84, 0.92) });
   page.drawText('and confident exam day.', { x: 29, y: 61, size: 8, font, color: rgb(0.75, 0.84, 0.92) });
 
@@ -191,10 +191,10 @@ function drawAbout(page, pdf, logo, font, url, email) {
   const orange = rgb(1, 0.45, 0.05);
 
   page.drawRectangle({ x: 0, y: 0, width, height, color: rgb(1, 1, 1) });
-  page.drawRectangle({ x: 0, y: height - 76, width, height: 76, color: navy });
-  page.drawRectangle({ x: 38, y: height - 58, width: 102, height: 33, color: rgb(1, 1, 1) });
-  placeNativeLogo(page, logo, { x: 47, top: 32, width: 84, height: 20 });
-  page.drawText('ABOUT DUMP4EXAM', { x: 174, y: height - 47, size: 17, font, color: rgb(1, 1, 1) });
+  page.drawRectangle({ x: 0, y: height - 94, width, height: 94, color: navy });
+  page.drawRectangle({ x: 28, y: height - 81, width: 76, height: 62, color: rgb(1, 1, 1) });
+  placeNativeLogo(page, logo, { x: 33, top: 22, width: 66, height: 56 });
+  page.drawText('ABOUT DUMP4EXAM', { x: 135, y: height - 58, size: 17, font, color: rgb(1, 1, 1) });
   page.drawRectangle({ x: 39, y: height - 119, width: 54, height: 5, color: orange });
   page.drawText('Study smarter. Build confidence. Be ready.', { x: 39, y: height - 147, size: 18, font, color: navy });
   page.drawText('Dump4Exam brings exam preparation into one focused space.', { x: 39, y: height - 176, size: 9, font, color: rgb(0.34, 0.39, 0.46) });
@@ -230,12 +230,12 @@ function drawThankYouPage(page, logo, font, url, email) {
   page.drawRectangle({ x: 0, y: 0, width: 74, height, color: navy });
   page.drawCircle({ x: 37, y: height - 92, size: 22, color: blue, opacity: 0.4 });
   page.drawCircle({ x: 37, y: 70, size: 33, color: orange, opacity: 0.35 });
-  page.drawRectangle({ x: 163, y: height - 126, width: 270, height: 47, color: rgb(1, 1, 1) });
-  placeNativeLogo(page, logo, { x: 188, top: 92, width: 220, height: 30 });
-  drawCenteredText(page, font, 'THANK YOU', width / 2 + 32, height - 218, 31, navy);
-  drawCenteredText(page, font, 'Best wishes for your exam.', width / 2 + 32, height - 252, 15, orange);
-  drawCenteredText(page, font, 'You have put in the effort. Stay focused, trust your preparation,', width / 2 + 32, height - 298, 10, rgb(0.34, 0.39, 0.46));
-  drawCenteredText(page, font, 'and take the next step with confidence.', width / 2 + 32, height - 316, 10, rgb(0.34, 0.39, 0.46));
+  page.drawRectangle({ x: 226, y: height - 157, width: 146, height: 119, color: rgb(1, 1, 1) });
+  placeNativeLogo(page, logo, { x: 235, top: 47, width: 128, height: 99 });
+  drawCenteredText(page, font, 'THANK YOU', width / 2 + 32, height - 245, 31, navy);
+  drawCenteredText(page, font, 'Best wishes for your exam.', width / 2 + 32, height - 279, 15, orange);
+  drawCenteredText(page, font, 'You have put in the effort. Stay focused, trust your preparation,', width / 2 + 32, height - 325, 10, rgb(0.34, 0.39, 0.46));
+  drawCenteredText(page, font, 'and take the next step with confidence.', width / 2 + 32, height - 343, 10, rgb(0.34, 0.39, 0.46));
   page.drawRectangle({ x: 146, y: height - 454, width: 342, height: 108, color: rgb(0.95, 0.97, 0.99) });
   ['Review key topics', 'Stay calm and focused', 'Believe in your progress'].forEach((label, index) => {
     const y = height - 382 - index * 27;
@@ -270,20 +270,22 @@ function drawQuestionHeaderBrand(page, logo, header) {
   placeNativeLogo(page, logo, { x: header.x - 4, top: height - header.y - header.height - 2, width: header.width + 8, height: header.height + 3 });
 }
 
-async function findQuestionHeaderBrands(sourceBytes, pageCount) {
+async function inspectSourceContent(sourceBytes, pageCount) {
   const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
   const loadingTask = pdfjs.getDocument({ data: new Uint8Array(sourceBytes), disableWorker: true });
   try {
     const source = await loadingTask.promise;
     const headers = [];
-    for (let pageNumber = 4; pageNumber < pageCount; pageNumber += 1) {
+    let lastPageText = '';
+    for (let pageNumber = 4; pageNumber <= pageCount; pageNumber += 1) {
       const page = await source.getPage(pageNumber);
       const text = await page.getTextContent();
+      if (pageNumber === pageCount) lastPageText = text.items.map(item => item.str).join(' ');
       headers[pageNumber - 1] = text.items
         .filter(item => item.str.replace(/\s/g, '').toLowerCase() === 'certyiq')
         .map(item => ({ x: item.transform[4], y: item.transform[5], width: item.width, height: item.height }));
     }
-    return headers;
+    return { headers, lastPageText };
   } finally {
     await loadingTask.destroy();
   }
@@ -298,17 +300,21 @@ async function main() {
   const pdf = await PDFDocument.load(sourceBytes, { ignoreEncryption: true, updateMetadata: false });
   const logo = await pdf.embedPng(await readFile(args.logo));
   const font = await pdf.embedFont(StandardFonts.Helvetica);
+  const sourcePageCount = pdf.getPageCount();
+  const { headers: questionHeaderBrands, lastPageText } = await inspectSourceContent(sourceBytes, sourcePageCount);
+  if (/\bthank\s*you\b/i.test(lastPageText)) pdf.removePage(pdf.getPageCount() - 1);
   const pages = pdf.getPages();
-  const questionHeaderBrands = await findQuestionHeaderBrands(sourceBytes, pages.length);
   for (const page of pages) removeCertyIqLinks(page, pdf);
   if (pages[0]) drawCover(pages[0], pdf, logo, font, args.url);
   if (pages[1]) drawAbout(pages[1], pdf, logo, font, args.url, args.email);
   pages.forEach((page, index) => questionHeaderBrands[index]?.forEach(header => drawQuestionHeaderBrand(page, logo, header)));
   if (pages[2]) drawPaperLink(pages[2], pdf, font, args.url, 20);
-  if (pages.at(-1)) drawThankYouPage(pages.at(-1), logo, font, args.url, args.email);
+  const lastContentPage = pages.at(-1);
+  const thankYouPage = pdf.addPage([lastContentPage?.getWidth() ?? A5.width, lastContentPage?.getHeight() ?? A5.height]);
+  drawThankYouPage(thankYouPage, logo, font, args.url, args.email);
   await mkdir(path.dirname(path.resolve(args.output)), { recursive: true });
   await writeFile(args.output, await pdf.save({ useObjectStreams: true }));
-  console.log(`Wrote ${args.output} (${pages.length} pages).`);
+  console.log(`Wrote ${args.output} (${pdf.getPageCount()} pages).`);
 }
 
 main().catch(error => { console.error(error.message || error); process.exitCode = 1; });
