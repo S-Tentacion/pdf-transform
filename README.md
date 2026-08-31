@@ -26,7 +26,7 @@ npm start
 ```
 
 Open `http://localhost:3000`, select the PDF, then choose **Transform and download**. The bundled
-Dump4Exam logo is used automatically. It is the cropped, high-resolution badge supplied for this project; upload a replacement PNG only when the logo changes. The browser downloads the completed PDF
+Dump4Exam logo is used automatically. It is the supplied Dump4Exam logo bundled with this project; upload a replacement image only when the logo changes. PNG, JPEG, WebP, GIF, and SVG uploads are converted to a PDF-safe PNG automatically. The browser downloads the completed PDF
 automatically. Nothing is uploaded to a remote server, and no Poppler setup is
 needed. Both forms include editable website and support-email fields, defaulting
 to `https://dump4exam.vercel.app/` and `Dump4Exam@gmail.com`.
@@ -50,7 +50,7 @@ The fallback preserves the visual page appearance but makes source text
 non-selectable and form fields non-interactive. It does not bypass passwords or
 permissions.
 
-Add `--logo "C:\path\to\replacement-logo.png"` only when you need to override the bundled Dump4Exam logo.
+Add `--logo "C:\path\to\replacement-logo.png"` only when you need to override the bundled Dump4Exam logo. Common image formats are accepted.
 
 ## Adjusting placement
 
@@ -62,7 +62,7 @@ top edge of a 612 x 792 Letter page. Tweak only the coordinate blocks in the
 ## CertyIQ to Dump4Exam
 
 The local page now includes a second form for the supplied CertyIQ A5 exam-PDF layout. Upload
-the CertyIQ PDF and a **Dump4Exam PNG logo**, then set the target website and support email.
+the CertyIQ PDF and an optional **Dump4Exam image logo**, then set the target website and support email.
 It replaces the CertyIQ cover and information-page branding, including the original vendor
 artwork and testimonial collage, with Dump4Exam placeholder panels. It also removes CertyIQ
 hyperlinks and updates the title/closing-page links. It also creates a new Dump4Exam intro page,

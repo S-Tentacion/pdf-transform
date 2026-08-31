@@ -5,6 +5,7 @@ import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { createCanvas, DOMMatrix, ImageData, Path2D } from '@napi-rs/canvas';
 import createQpdf from '@neslinesli93/qpdf-wasm';
+import { embedLogo } from './logo.js';
 
 const require = createRequire(import.meta.url);
 const { PDFDocument, StandardFonts, rgb, PDFName, PDFArray, PDFDict, PDFString, PDFHexString, pushGraphicsState, popGraphicsState, rectangle, clip, endPath } = require('pdf-lib');
@@ -18,7 +19,7 @@ const LETTER = { width: 612, height: 792 };
 function usage(message) {
   if (message) console.error(`Error: ${message}\n`);
   console.error(`Usage:
-  npm run transform -- --input <source.pdf> --output <result.pdf> [--logo <replacement.png>] [--url <website>] [--email <address>]
+  npm run transform -- --input <source.pdf> --output <result.pdf> [--logo <replacement-image>] [--url <website>] [--email <address>]
 
 Options:
   --all-pages                 Put the replacement header on every page (including page 2).
@@ -79,12 +80,12 @@ function cover(page, box) {
   page.drawRectangle({ ...scaleBox(page, box), color: rgb(1, 1, 1) });
 }
 
-function placeLogo(page, logo, box) {
+function placeLogo(page, logo, box, focusY = 0.5) {
   const target = scaleBox(page, box);
   const logoRatio = logo.width / logo.height;
   const targetRatio = target.width / target.height;
-  // Fill the existing PassLeader logo bands with the center of the new badge.
-  // Clipping keeps the larger source artwork inside the cleared rectangle.
+  // Fill the existing PassLeader logo bands with the brand wordmark area.
+  // Clipping keeps taller logo artwork inside the cleared rectangle.
   const width = targetRatio > logoRatio ? target.width : target.height * logoRatio;
   const height = targetRatio > logoRatio ? target.width / logoRatio : target.height;
   page.pushOperators(
@@ -95,7 +96,7 @@ function placeLogo(page, logo, box) {
   );
   page.drawImage(logo, {
     x: target.x + (target.width - width) / 2,
-    y: target.y + (target.height - height) / 2,
+    y: target.y + target.height / 2 - height * focusY,
     width,
     height,
   });
@@ -182,7 +183,6 @@ async function main() {
   if (args.help) return usage();
   if (args.error) return usage(args.error);
 
-  const logoBytes = await readFile(args.logo);
   let pdf;
   let pages;
   let rasterized = false;
@@ -272,7 +272,7 @@ async function main() {
     }
   }
 
-  const logo = await pdf.embedPng(logoBytes);
+  const logo = await embedLogo(pdf, args.logo);
   const font = await pdf.embedFont(StandardFonts.Helvetica);
   pages.forEach((page, zeroBasedPage) => {
     const pageNumber = zeroBasedPage + 1;
@@ -281,10 +281,10 @@ async function main() {
     // larger header. Page 2 is a notice page with no header.
     if (pageNumber === 1) {
       cover(page, { x: 180, top: 112, width: 255, height: 72 });
-      placeLogo(page, logo, { x: 204, top: 128, width: 205, height: 47 });
+      placeLogo(page, logo, { x: 204, top: 128, width: 205, height: 47 }, 0.27);
     } else if (args.allPages || pageNumber >= 3) {
       cover(page, { x: 76, top: 0, width: 280, height: 64 });
-      placeLogo(page, logo, { x: 116, top: 9, width: 195, height: 44 });
+      placeLogo(page, logo, { x: 116, top: 9, width: 195, height: 44 }, 0.27);
     }
 
     removePassLeaderLinks(page, pdf);

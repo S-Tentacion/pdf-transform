@@ -3,6 +3,7 @@ import path from 'node:path';
 import process from 'node:process';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
+import { embedLogo } from './logo.js';
 
 const require = createRequire(import.meta.url);
 const { PDFDocument, StandardFonts, rgb, PDFName, PDFArray, PDFDict, PDFString, PDFHexString } = require('pdf-lib');
@@ -12,7 +13,7 @@ const A5 = { width: 595, height: 421 };
 
 function usage(message) {
   if (message) console.error(`Error: ${message}\n`);
-  console.error(`Usage: node transform-certyiq.js --input <source.pdf> --output <result.pdf> [--logo <replacement.png>] [--url <website>] [--email <address>]`);
+  console.error(`Usage: node transform-certyiq.js --input <source.pdf> --output <result.pdf> [--logo <replacement-image>] [--url <website>] [--email <address>]`);
   process.exitCode = message ? 1 : 0;
 }
 
@@ -298,7 +299,7 @@ async function main() {
 
   const sourceBytes = await readFile(args.input);
   const pdf = await PDFDocument.load(sourceBytes, { ignoreEncryption: true, updateMetadata: false });
-  const logo = await pdf.embedPng(await readFile(args.logo));
+  const logo = await embedLogo(pdf, args.logo);
   const font = await pdf.embedFont(StandardFonts.Helvetica);
   const sourcePageCount = pdf.getPageCount();
   const { headers: questionHeaderBrands, lastPageText } = await inspectSourceContent(sourceBytes, sourcePageCount);
