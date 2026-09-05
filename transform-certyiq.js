@@ -4,6 +4,7 @@ import process from 'node:process';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { embedLogo } from './logo.js';
+import { detectExamDetails } from './exam-details.js';
 
 const require = createRequire(import.meta.url);
 const { PDFDocument, StandardFonts, rgb, PDFName, PDFArray, PDFDict, PDFString, PDFHexString } = require('pdf-lib');
@@ -89,6 +90,22 @@ function drawCenteredText(page, font, value, centerX, y, size, color) {
   page.drawText(value, { x: centerX - font.widthOfTextAtSize(value, size) / 2, y, size, font, color });
 }
 
+function wrapText(font, value, size, maxWidth, maxLines = 2) {
+  const words = value.split(/\s+/).filter(Boolean);
+  const lines = [];
+  let line = '';
+  for (const word of words) {
+    const candidate = line ? `${line} ${word}` : word;
+    if (line && font.widthOfTextAtSize(candidate, size) > maxWidth) {
+      lines.push(line);
+      line = word;
+      if (lines.length === maxLines) break;
+    } else line = candidate;
+  }
+  if (lines.length < maxLines && line) lines.push(line);
+  return lines;
+}
+
 function drawCoverPlaceholder(page, logo, font) {
   // Remove the original vendor artwork and replace it with a Dump4Exam panel.
   cover(page, { x: 225, top: 16, width: 360, height: 292 });
@@ -154,7 +171,7 @@ function addUriLink(page, pdf, box, url) {
   annotations.push(reference);
 }
 
-function drawCover(page, pdf, logo, font, url) {
+function drawCover(page, pdf, logo, font, url, exam) {
   const { width, height } = page.getSize();
   const navy = rgb(0.06, 0.09, 0.15);
   const blue = rgb(0.08, 0.62, 0.86);
@@ -174,11 +191,12 @@ function drawCover(page, pdf, logo, font, url) {
   page.drawText('Built for focused practice', { x: 29, y: 74, size: 8, font, color: rgb(0.75, 0.84, 0.92) });
   page.drawText('and confident exam day.', { x: 29, y: 61, size: 8, font, color: rgb(0.75, 0.84, 0.92) });
 
-  page.drawText('Microsoft Power Platform', { x: 195, y: height - 145, size: 12, font, color: rgb(0.17, 0.2, 0.25) });
-  page.drawText('Functional Consultant', { x: 195, y: height - 166, size: 12, font, color: rgb(0.17, 0.2, 0.25) });
-  page.drawText('PL-200', { x: 195, y: height - 224, size: 34, font, color: navy });
-  page.drawText('Your structured guide for practice questions,', { x: 195, y: height - 257, size: 10, font, color: rgb(0.35, 0.4, 0.47) });
-  page.drawText('clear explanations, and steady progress.', { x: 195, y: height - 273, size: 10, font, color: rgb(0.35, 0.4, 0.47) });
+  const titleLines = wrapText(font, exam.name, 12, 345);
+  titleLines.forEach((line, index) => page.drawText(line, { x: 195, y: height - 145 - index * 21, size: 12, font, color: rgb(0.17, 0.2, 0.25) }));
+  const codeY = height - (titleLines.length > 1 ? 224 : 203);
+  page.drawText(exam.code, { x: 195, y: codeY, size: 34, font, color: navy });
+  page.drawText('Your structured guide for practice questions,', { x: 195, y: codeY - 33, size: 10, font, color: rgb(0.35, 0.4, 0.47) });
+  page.drawText('clear explanations, and steady progress.', { x: 195, y: codeY - 49, size: 10, font, color: rgb(0.35, 0.4, 0.47) });
   page.drawRectangle({ x: 195, y: 72, width: 260, height: 44, color: rgb(0.94, 0.97, 0.99) });
   page.drawText('Practice  •  Learn  •  Succeed', { x: 216, y: 88, size: 12, font, color: navy });
   page.drawText(url, { x: 195, y: 38, size: 8, font, color: blue });
@@ -298,6 +316,7 @@ async function main() {
   if (args.error) return usage(args.error);
 
   const sourceBytes = await readFile(args.input);
+  const exam = await detectExamDetails(sourceBytes, args.input);
   const pdf = await PDFDocument.load(sourceBytes, { ignoreEncryption: true, updateMetadata: false });
   const logo = await embedLogo(pdf, args.logo);
   const font = await pdf.embedFont(StandardFonts.Helvetica);
@@ -306,7 +325,7 @@ async function main() {
   if (/\bthank\s*you\b/i.test(lastPageText)) pdf.removePage(pdf.getPageCount() - 1);
   const pages = pdf.getPages();
   for (const page of pages) removeCertyIqLinks(page, pdf);
-  if (pages[0]) drawCover(pages[0], pdf, logo, font, args.url);
+  if (pages[0]) drawCover(pages[0], pdf, logo, font, args.url, exam);
   if (pages[1]) drawAbout(pages[1], pdf, logo, font, args.url, args.email);
   pages.forEach((page, index) => questionHeaderBrands[index]?.forEach(header => drawQuestionHeaderBrand(page, logo, header)));
   if (pages[2]) drawPaperLink(pages[2], pdf, font, args.url, 20);
@@ -315,7 +334,7 @@ async function main() {
   drawThankYouPage(thankYouPage, logo, font, args.url, args.email);
   await mkdir(path.dirname(path.resolve(args.output)), { recursive: true });
   await writeFile(args.output, await pdf.save({ useObjectStreams: true }));
-  console.log(`Wrote ${args.output} (${pdf.getPageCount()} pages).`);
+  console.log(`Wrote ${args.output} (${pdf.getPageCount()} pages; ${exam.code}: ${exam.name}).`);
 }
 
 main().catch(error => { console.error(error.message || error); process.exitCode = 1; });

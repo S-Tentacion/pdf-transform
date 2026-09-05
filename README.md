@@ -9,7 +9,7 @@ then preserves the rest of the document as vector content. The default coordinat
 - Repeating header logo on pages 3 onward
 - Repeating PassLeader footer name/URL on pages 3 onward
 - The support email on the notice page (page 2)
-- Removes PassLeader hyperlinks and makes the replacement URL/PL-400 link open `https://dump4exam.vercel.app/`
+- Removes PassLeader hyperlinks and makes the detected exam-code link open `https://dump4exam.vercel.app/`
 
 ## Easiest way: browser download
 
@@ -43,7 +43,7 @@ npm run transform -- `
   --input "C:\Users\princ\Downloads\PassLeader-400_Latest.pdf" `
   --url "https://dump4exam.vercel.app/" `
   --email "Dump4Exam@gmail.com" `
-  --output ".\output\PL-400-Dump4Exam.pdf"
+  --output ".\output\Dump4Exam.pdf"
 ```
 
 The fallback preserves the visual page appearance but makes source text
@@ -56,7 +56,7 @@ Add `--logo "C:\path\to\replacement-logo.png"` only when you need to override th
 
 The rectangles in `transform.js` use PDF points with `top` measured from the
 top edge of a 612 x 792 Letter page. Tweak only the coordinate blocks in the
-`pages.forEach` loop if a future PDF uses a different template. Add
+`pages.forEach` loop if a future PDF uses a different template. The exam code and name are detected from the uploaded PDF; they are not fixed to PL-400 or PL-200. Add
 `--all-pages` only when page 2 should also receive a header logo.
 
 ## CertyIQ to Dump4Exam

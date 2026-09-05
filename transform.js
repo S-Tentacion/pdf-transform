@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { createCanvas, DOMMatrix, ImageData, Path2D } from '@napi-rs/canvas';
 import createQpdf from '@neslinesli93/qpdf-wasm';
 import { embedLogo } from './logo.js';
+import { detectExamDetails } from './exam-details.js';
 
 const require = createRequire(import.meta.url);
 const { PDFDocument, StandardFonts, rgb, PDFName, PDFArray, PDFDict, PDFString, PDFHexString, pushGraphicsState, popGraphicsState, rectangle, clip, endPath } = require('pdf-lib');
@@ -154,13 +155,40 @@ function addUriLink(page, pdf, box, url) {
   annotations.push(reference);
 }
 
-function drawFooter(page, pdf, font, websiteUrl) {
+function placeNativeLogo(page, logo, { x, top, width, height }) {
+  const logoRatio = logo.width / logo.height;
+  const boxRatio = width / height;
+  const drawWidth = boxRatio > logoRatio ? height * logoRatio : width;
+  const drawHeight = boxRatio > logoRatio ? height : width / logoRatio;
+  page.drawImage(logo, { x: x + (width - drawWidth) / 2, y: page.getHeight() - top - height + (height - drawHeight) / 2, width: drawWidth, height: drawHeight });
+}
+
+function wrapText(font, value, size, maxWidth, maxLines = 2) {
+  const words = value.split(/\s+/).filter(Boolean);
+  const lines = [];
+  let line = '';
+  for (const word of words) {
+    const candidate = line ? `${line} ${word}` : word;
+    if (line && font.widthOfTextAtSize(candidate, size) > maxWidth) {
+      lines.push(line);
+      line = word;
+      if (lines.length === maxLines) break;
+    } else line = candidate;
+  }
+  if (lines.length < maxLines && line) lines.push(line);
+  return lines;
+}
+
+function drawCenteredText(page, font, value, centerX, y, size, color) {
+  page.drawText(value, { x: centerX - font.widthOfTextAtSize(value, size) / 2, y, size, font, color });
+}
+
+function drawFooter(page, pdf, font, websiteUrl, examCode) {
   const line = { x: 88, top: 733, width: 385, height: 20 };
   const urlBox = { x: 88, top: 757, width: 165, height: 19 };
   const placement = scaleBox(page, line);
   const textY = placement.y + (placement.height - 10) / 2;
   const prefix = 'Get Latest & Actual ';
-  const examCode = 'PL-400';
   const suffix = " Exam's Question and Answers from Dump4Exam.";
   const blue = rgb(0, 0, 1);
 
@@ -178,11 +206,104 @@ function drawFooter(page, pdf, font, websiteUrl) {
   addUriLink(page, pdf, urlBox, websiteUrl);
 }
 
+function drawIntroPage(page, pdf, logo, font, url, exam) {
+  const { width, height } = page.getSize();
+  const navy = rgb(0.06, 0.09, 0.15);
+  const blue = rgb(0.08, 0.62, 0.86);
+  const orange = rgb(1, 0.45, 0.05);
+  page.drawRectangle({ x: 0, y: 0, width, height, color: rgb(1, 1, 1) });
+  page.drawRectangle({ x: 0, y: 0, width: 178, height, color: navy });
+  page.drawCircle({ x: 54, y: height - 68, size: 29, color: blue, opacity: 0.35 });
+  page.drawCircle({ x: 130, y: 65, size: 58, color: orange, opacity: 0.22 });
+  page.drawRectangle({ x: 30, y: height - 190, width: 116, height: 132, color: rgb(1, 1, 1) });
+  placeNativeLogo(page, logo, { x: 38, top: 67, width: 100, height: 114 });
+  page.drawText('PREMIUM EXAM', { x: 30, y: height - 224, size: 12, font, color: rgb(1, 1, 1) });
+  page.drawText('PREPARATION', { x: 30, y: height - 243, size: 12, font, color: rgb(1, 1, 1) });
+  page.drawText('Built for focused practice', { x: 30, y: 95, size: 9, font, color: rgb(0.75, 0.84, 0.92) });
+  page.drawText('and confident exam day.', { x: 30, y: 80, size: 9, font, color: rgb(0.75, 0.84, 0.92) });
+  page.drawRectangle({ x: 222, y: height - 92, width: 62, height: 7, color: orange });
+  page.drawRectangle({ x: 222, y: height - 106, width: 150, height: 4, color: blue });
+  const titleLines = wrapText(font, exam.name, 18, 340);
+  titleLines.forEach((line, index) => page.drawText(line, { x: 222, y: height - 164 - index * 25, size: 18, font, color: rgb(0.17, 0.2, 0.25) }));
+  page.drawText(exam.code, { x: 222, y: height - 255, size: 42, font, color: navy });
+  page.drawText('Your structured guide for practice questions,', { x: 222, y: height - 294, size: 11, font, color: rgb(0.35, 0.4, 0.47) });
+  page.drawText('clear explanations, and steady progress.', { x: 222, y: height - 313, size: 11, font, color: rgb(0.35, 0.4, 0.47) });
+  page.drawRectangle({ x: 222, y: 102, width: 300, height: 52, color: rgb(0.94, 0.97, 0.99) });
+  page.drawText('Practice  •  Learn  •  Succeed', { x: 247, y: 121, size: 13, font, color: navy });
+  page.drawText(url, { x: 222, y: 58, size: 9, font, color: blue });
+  addUriLink(page, pdf, { x: 222, top: height - 70, width: 240, height: 18 }, url);
+}
+
+function drawAboutPage(page, pdf, logo, font, url, email) {
+  const { width, height } = page.getSize();
+  const navy = rgb(0.06, 0.09, 0.15);
+  const blue = rgb(0.08, 0.62, 0.86);
+  const orange = rgb(1, 0.45, 0.05);
+  page.drawRectangle({ x: 0, y: 0, width, height, color: rgb(1, 1, 1) });
+  page.drawRectangle({ x: 0, y: height - 110, width, height: 110, color: navy });
+  page.drawRectangle({ x: 38, y: height - 94, width: 86, height: 72, color: rgb(1, 1, 1) });
+  placeNativeLogo(page, logo, { x: 45, top: 28, width: 72, height: 60 });
+  page.drawText('ABOUT DUMP4EXAM', { x: 156, y: height - 67, size: 20, font, color: rgb(1, 1, 1) });
+  page.drawRectangle({ x: 48, y: height - 150, width: 64, height: 6, color: orange });
+  page.drawText('Study smarter. Build confidence. Be ready.', { x: 48, y: height - 190, size: 22, font, color: navy });
+  page.drawText('Dump4Exam brings exam preparation into one focused space.', { x: 48, y: height - 223, size: 11, font, color: rgb(0.34, 0.39, 0.46) });
+  page.drawText('Use practice material to identify gaps, learn from explanations,', { x: 48, y: height - 242, size: 11, font, color: rgb(0.34, 0.39, 0.46) });
+  page.drawText('and progress toward exam day with clarity.', { x: 48, y: height - 261, size: 11, font, color: rgb(0.34, 0.39, 0.46) });
+  const cards = [
+    ['01', 'Practice', 'Work through focused', 'exam-style questions.'],
+    ['02', 'Understand', 'Use explanations to', 'strengthen weak areas.'],
+    ['03', 'Progress', 'Build momentum at', 'your own pace.'],
+  ];
+  cards.forEach(([number, title, lineOne, lineTwo], index) => {
+    const x = 48 + index * 173;
+    page.drawRectangle({ x, y: 177, width: 150, height: 116, color: rgb(0.95, 0.97, 0.99), borderColor: rgb(0.84, 0.9, 0.95), borderWidth: 0.6 });
+    page.drawRectangle({ x, y: 272, width: 150, height: 21, color: index === 1 ? orange : blue });
+    page.drawText(number, { x: x + 12, y: 278, size: 9, font, color: rgb(1, 1, 1) });
+    page.drawText(title, { x: x + 12, y: 242, size: 13, font, color: navy });
+    page.drawText(lineOne, { x: x + 12, y: 215, size: 9, font, color: rgb(0.34, 0.39, 0.46) });
+    page.drawText(lineTwo, { x: x + 12, y: 200, size: 9, font, color: rgb(0.34, 0.39, 0.46) });
+  });
+  page.drawText(url, { x: 48, y: 86, size: 9, font, color: blue });
+  page.drawText(email, { x: 48, y: 66, size: 9, font, color: blue });
+  addUriLink(page, pdf, { x: 48, top: height - 98, width: 250, height: 17 }, url);
+  addUriLink(page, pdf, { x: 48, top: height - 78, width: 250, height: 17 }, `mailto:${email}`);
+}
+
+function drawThankYouPage(page, pdf, logo, font, url, email) {
+  const { width, height } = page.getSize();
+  const navy = rgb(0.06, 0.09, 0.15);
+  const blue = rgb(0.08, 0.62, 0.86);
+  const orange = rgb(1, 0.45, 0.05);
+  page.drawRectangle({ x: 0, y: 0, width, height, color: rgb(1, 1, 1) });
+  page.drawRectangle({ x: 0, y: 0, width: 82, height, color: navy });
+  page.drawCircle({ x: 41, y: height - 105, size: 25, color: blue, opacity: 0.4 });
+  page.drawCircle({ x: 41, y: 78, size: 36, color: orange, opacity: 0.35 });
+  page.drawRectangle({ x: 245, y: height - 190, width: 122, height: 134, color: rgb(1, 1, 1) });
+  placeNativeLogo(page, logo, { x: 255, top: 67, width: 102, height: 114 });
+  drawCenteredText(page, font, 'THANK YOU', width / 2 + 38, height - 283, 35, navy);
+  drawCenteredText(page, font, 'Best wishes for your exam.', width / 2 + 38, height - 322, 17, orange);
+  drawCenteredText(page, font, 'You have put in the effort. Stay focused, trust your preparation,', width / 2 + 38, height - 372, 11, rgb(0.34, 0.39, 0.46));
+  drawCenteredText(page, font, 'and take the next step with confidence.', width / 2 + 38, height - 393, 11, rgb(0.34, 0.39, 0.46));
+  page.drawRectangle({ x: 151, y: height - 542, width: 348, height: 126, color: rgb(0.95, 0.97, 0.99) });
+  ['Review key topics', 'Stay calm and focused', 'Believe in your progress'].forEach((label, index) => {
+    const y = height - 459 - index * 32;
+    page.drawCircle({ x: 184, y: y + 3, size: 7, color: index === 1 ? orange : blue });
+    page.drawText(label, { x: 203, y, size: 12, font, color: navy });
+  });
+  drawCenteredText(page, font, 'Practice • Learn • Succeed', width / 2 + 38, 118, 15, navy);
+  drawCenteredText(page, font, url, width / 2 + 38, 85, 9, blue);
+  drawCenteredText(page, font, email, width / 2 + 38, 65, 9, blue);
+  addUriLink(page, pdf, { x: 235, top: height - 98, width: 180, height: 16 }, url);
+  addUriLink(page, pdf, { x: 235, top: height - 78, width: 180, height: 16 }, `mailto:${email}`);
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   if (args.help) return usage();
   if (args.error) return usage(args.error);
 
+  const sourceBytes = await readFile(args.input);
+  const exam = await detectExamDetails(sourceBytes, args.input);
   let pdf;
   let pages;
   let rasterized = false;
@@ -195,7 +316,7 @@ async function main() {
     globalThis.Path2D ??= Path2D;
     const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
     const loadingTask = pdfjs.getDocument({
-      data: new Uint8Array(await readFile(args.input)),
+      data: new Uint8Array(sourceBytes),
       disableWorker: true,
       standardFontDataUrl: `${path.join(moduleDirectory, 'node_modules', 'pdfjs-dist', 'standard_fonts').replaceAll('\\', '/')}/`,
     });
@@ -226,7 +347,7 @@ async function main() {
   }
 
   async function loadEditableSource() {
-    const source = await readFile(args.input);
+    const source = sourceBytes;
     const originalWarn = console.warn;
     const load = async (bytes) => {
       // pdf-lib writes parser diagnostics through console.warn. We replace those
@@ -277,12 +398,7 @@ async function main() {
   pages.forEach((page, zeroBasedPage) => {
     const pageNumber = zeroBasedPage + 1;
 
-    // Page 1 has a centered cover logo; the remaining question pages use a
-    // larger header. Page 2 is a notice page with no header.
-    if (pageNumber === 1) {
-      cover(page, { x: 180, top: 112, width: 255, height: 72 });
-      placeLogo(page, logo, { x: 204, top: 128, width: 205, height: 47 }, 0.27);
-    } else if (args.allPages || pageNumber >= 3) {
+    if (args.allPages || pageNumber >= 3) {
       cover(page, { x: 76, top: 0, width: 280, height: 64 });
       placeLogo(page, logo, { x: 116, top: 9, width: 195, height: 44 }, 0.27);
     }
@@ -290,22 +406,19 @@ async function main() {
     removePassLeaderLinks(page, pdf);
 
     if (pageNumber >= 3) {
-      drawFooter(page, pdf, font, args.url);
+      drawFooter(page, pdf, font, args.url, exam.code);
     }
   });
 
-  // The notice page contains the only other fixed PassLeader reference.
-  if (pages.length >= 2) {
-    replaceText(pages[1], font, {
-      x: 88, top: 373, width: 390, height: 21,
-      value: `${args.email} and our technical experts will provide support in 24 hours.`, size: 10,
-      color: rgb(0, 0, 1),
-    });
-  }
+  if (pages[0]) drawIntroPage(pages[0], pdf, logo, font, args.url, exam);
+  if (pages[1]) drawAboutPage(pages[1], pdf, logo, font, args.url, args.email);
+  const lastContentPage = pages.at(-1);
+  const thankYouPage = pdf.addPage([lastContentPage?.getWidth() ?? LETTER.width, lastContentPage?.getHeight() ?? LETTER.height]);
+  drawThankYouPage(thankYouPage, pdf, logo, font, args.url, args.email);
 
   await mkdir(path.dirname(path.resolve(args.output)), { recursive: true });
   await writeFile(args.output, await pdf.save({ useObjectStreams: true }));
-  console.log(`Wrote ${args.output} (${pages.length} pages${rasterized ? ', rasterized' : ''}).`);
+  console.log(`Wrote ${args.output} (${pdf.getPageCount()} pages${rasterized ? ', rasterized' : ''}; ${exam.code}: ${exam.name}).`);
 }
 
 main().catch((error) => {
