@@ -13,14 +13,15 @@ const { PDFDocument, StandardFonts, rgb, PDFName, PDFArray, PDFDict, PDFString, 
 const moduleDirectory = path.dirname(fileURLToPath(import.meta.url));
 const DEFAULT_DUMP4EXAM_URL = 'https://dump4exam.vercel.app/';
 const DEFAULT_DUMP4EXAM_EMAIL = 'Dump4Exam@gmail.com';
-const DEFAULT_LOGO_PATH = path.join(moduleDirectory, 'assets', 'dump4exam.png');
+const DEFAULT_LOGO_PATH = path.join(moduleDirectory, 'assets', 'pdf-logo.png');
+const DEFAULT_SECONDARY_LOGO_PATH = path.join(moduleDirectory, 'assets', 'logo.png');
 
 const LETTER = { width: 612, height: 792 };
 
 function usage(message) {
   if (message) console.error(`Error: ${message}\n`);
   console.error(`Usage:
-  npm run transform -- --input <source.pdf> --output <result.pdf> [--logo <replacement-image>] [--url <website>] [--email <address>]
+  npm run transform -- --input <source.pdf> --output <result.pdf> [--logo <primary-image>] [--secondary-logo <corner-image>] [--url <website>] [--email <address>]
 
 Options:
   --all-pages                 Put the replacement header on every page (including page 2).
@@ -35,18 +36,19 @@ The built-in coordinates are tuned for the supplied Letter-size PassLeader PDF.`
 }
 
 function parseArgs(argv) {
-  const values = { allPages: false, ignoreEncryption: false, rasterize: false, dpi: 120, jpegQuality: 65, url: DEFAULT_DUMP4EXAM_URL, email: DEFAULT_DUMP4EXAM_EMAIL, logo: DEFAULT_LOGO_PATH };
+  const values = { allPages: false, ignoreEncryption: false, rasterize: false, dpi: 120, jpegQuality: 65, url: DEFAULT_DUMP4EXAM_URL, email: DEFAULT_DUMP4EXAM_EMAIL, logo: DEFAULT_LOGO_PATH, secondaryLogo: DEFAULT_SECONDARY_LOGO_PATH };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     if (arg === '--help') return { help: true };
     if (arg === '--all-pages') { values.allPages = true; continue; }
     if (arg === '--ignore-encryption') { values.ignoreEncryption = true; continue; }
     if (arg === '--rasterize') { values.rasterize = true; continue; }
-    if (!['--input', '--logo', '--output', '--dpi', '--jpeg-quality', '--url', '--email'].includes(arg)) return { error: `Unknown option: ${arg}` };
+    if (!['--input', '--logo', '--secondary-logo', '--output', '--dpi', '--jpeg-quality', '--url', '--email'].includes(arg)) return { error: `Unknown option: ${arg}` };
     const value = argv[index + 1];
     if (!value || value.startsWith('--')) return { error: `Missing value for ${arg}` };
     if (arg === '--dpi') values.dpi = Number(value);
     else if (arg === '--jpeg-quality') values.jpegQuality = Number(value);
+    else if (arg === '--secondary-logo') values.secondaryLogo = value;
     else values[arg.slice(2)] = value;
     index += 1;
   }
@@ -206,7 +208,7 @@ function drawFooter(page, pdf, font, websiteUrl, examCode) {
   addUriLink(page, pdf, urlBox, websiteUrl);
 }
 
-function drawIntroPage(page, pdf, logo, font, url, exam) {
+function drawIntroPage(page, pdf, primaryLogo, secondaryLogo, font, url, exam) {
   const { width, height } = page.getSize();
   const navy = rgb(0.06, 0.09, 0.15);
   const blue = rgb(0.08, 0.62, 0.86);
@@ -215,8 +217,9 @@ function drawIntroPage(page, pdf, logo, font, url, exam) {
   page.drawRectangle({ x: 0, y: 0, width: 178, height, color: navy });
   page.drawCircle({ x: 54, y: height - 68, size: 29, color: blue, opacity: 0.35 });
   page.drawCircle({ x: 130, y: 65, size: 58, color: orange, opacity: 0.22 });
-  page.drawRectangle({ x: 30, y: height - 190, width: 116, height: 132, color: rgb(1, 1, 1) });
-  placeNativeLogo(page, logo, { x: 38, top: 67, width: 100, height: 114 });
+  page.drawRectangle({ x: 19, y: height - 190, width: 140, height: 132, color: rgb(1, 1, 1), borderColor: rgb(0.72, 0.82, 0.9), borderWidth: 0.8 });
+  placeNativeLogo(page, primaryLogo, { x: 25, top: 67, width: 128, height: 114 });
+  placeNativeLogo(page, secondaryLogo, { x: width - 190, top: 31, width: 160, height: 45 });
   page.drawText('PREMIUM EXAM', { x: 30, y: height - 224, size: 12, font, color: rgb(1, 1, 1) });
   page.drawText('PREPARATION', { x: 30, y: height - 243, size: 12, font, color: rgb(1, 1, 1) });
   page.drawText('Built for focused practice', { x: 30, y: 95, size: 9, font, color: rgb(0.75, 0.84, 0.92) });
@@ -234,15 +237,16 @@ function drawIntroPage(page, pdf, logo, font, url, exam) {
   addUriLink(page, pdf, { x: 222, top: height - 70, width: 240, height: 18 }, url);
 }
 
-function drawAboutPage(page, pdf, logo, font, url, email) {
+function drawAboutPage(page, pdf, primaryLogo, secondaryLogo, font, url, email) {
   const { width, height } = page.getSize();
   const navy = rgb(0.06, 0.09, 0.15);
   const blue = rgb(0.08, 0.62, 0.86);
   const orange = rgb(1, 0.45, 0.05);
   page.drawRectangle({ x: 0, y: 0, width, height, color: rgb(1, 1, 1) });
   page.drawRectangle({ x: 0, y: height - 110, width, height: 110, color: navy });
-  page.drawRectangle({ x: 38, y: height - 94, width: 86, height: 72, color: rgb(1, 1, 1) });
-  placeNativeLogo(page, logo, { x: 45, top: 28, width: 72, height: 60 });
+  page.drawRectangle({ x: 28, y: height - 96, width: 110, height: 74, color: rgb(1, 1, 1), borderColor: rgb(0.72, 0.82, 0.9), borderWidth: 0.8 });
+  placeNativeLogo(page, primaryLogo, { x: 34, top: 29, width: 98, height: 60 });
+  placeNativeLogo(page, secondaryLogo, { x: width - 206, top: 31, width: 168, height: 46 });
   page.drawText('ABOUT DUMP4EXAM', { x: 156, y: height - 67, size: 20, font, color: rgb(1, 1, 1) });
   page.drawRectangle({ x: 48, y: height - 150, width: 64, height: 6, color: orange });
   page.drawText('Study smarter. Build confidence. Be ready.', { x: 48, y: height - 190, size: 22, font, color: navy });
@@ -269,7 +273,7 @@ function drawAboutPage(page, pdf, logo, font, url, email) {
   addUriLink(page, pdf, { x: 48, top: height - 78, width: 250, height: 17 }, `mailto:${email}`);
 }
 
-function drawThankYouPage(page, pdf, logo, font, url, email) {
+function drawThankYouPage(page, pdf, primaryLogo, secondaryLogo, font, url, email) {
   const { width, height } = page.getSize();
   const navy = rgb(0.06, 0.09, 0.15);
   const blue = rgb(0.08, 0.62, 0.86);
@@ -278,8 +282,9 @@ function drawThankYouPage(page, pdf, logo, font, url, email) {
   page.drawRectangle({ x: 0, y: 0, width: 82, height, color: navy });
   page.drawCircle({ x: 41, y: height - 105, size: 25, color: blue, opacity: 0.4 });
   page.drawCircle({ x: 41, y: 78, size: 36, color: orange, opacity: 0.35 });
-  page.drawRectangle({ x: 245, y: height - 190, width: 122, height: 134, color: rgb(1, 1, 1) });
-  placeNativeLogo(page, logo, { x: 255, top: 67, width: 102, height: 114 });
+  page.drawRectangle({ x: 228, y: height - 190, width: 156, height: 134, color: rgb(1, 1, 1), borderColor: rgb(0.72, 0.82, 0.9), borderWidth: 0.8 });
+  placeNativeLogo(page, primaryLogo, { x: 236, top: 67, width: 140, height: 114 });
+  placeNativeLogo(page, secondaryLogo, { x: width - 195, top: 27, width: 162, height: 44 });
   drawCenteredText(page, font, 'THANK YOU', width / 2 + 38, height - 283, 35, navy);
   drawCenteredText(page, font, 'Best wishes for your exam.', width / 2 + 38, height - 322, 17, orange);
   drawCenteredText(page, font, 'You have put in the effort. Stay focused, trust your preparation,', width / 2 + 38, height - 372, 11, rgb(0.34, 0.39, 0.46));
@@ -393,14 +398,17 @@ async function main() {
     }
   }
 
-  const logo = await embedLogo(pdf, args.logo);
+  const primaryLogo = await embedLogo(pdf, args.logo);
+  const secondaryLogo = await embedLogo(pdf, args.secondaryLogo);
   const font = await pdf.embedFont(StandardFonts.Helvetica);
   pages.forEach((page, zeroBasedPage) => {
     const pageNumber = zeroBasedPage + 1;
 
     if (args.allPages || pageNumber >= 3) {
-      cover(page, { x: 76, top: 0, width: 280, height: 64 });
-      placeLogo(page, logo, { x: 116, top: 9, width: 195, height: 44 }, 0.27);
+      // Replace the full original header, including any dark page-edge strip,
+      // before placing the secondary wordmark in a safely inset position.
+      cover(page, { x: 0, top: 0, width: LETTER.width, height: 78 });
+      placeLogo(page, secondaryLogo, { x: 116, top: 28, width: 195, height: 32 }, 0.5);
     }
 
     removePassLeaderLinks(page, pdf);
@@ -410,11 +418,11 @@ async function main() {
     }
   });
 
-  if (pages[0]) drawIntroPage(pages[0], pdf, logo, font, args.url, exam);
-  if (pages[1]) drawAboutPage(pages[1], pdf, logo, font, args.url, args.email);
+  if (pages[0]) drawIntroPage(pages[0], pdf, primaryLogo, secondaryLogo, font, args.url, exam);
+  if (pages[1]) drawAboutPage(pages[1], pdf, primaryLogo, secondaryLogo, font, args.url, args.email);
   const lastContentPage = pages.at(-1);
   const thankYouPage = pdf.addPage([lastContentPage?.getWidth() ?? LETTER.width, lastContentPage?.getHeight() ?? LETTER.height]);
-  drawThankYouPage(thankYouPage, pdf, logo, font, args.url, args.email);
+  drawThankYouPage(thankYouPage, pdf, primaryLogo, secondaryLogo, font, args.url, args.email);
 
   await mkdir(path.dirname(path.resolve(args.output)), { recursive: true });
   await writeFile(args.output, await pdf.save({ useObjectStreams: true }));

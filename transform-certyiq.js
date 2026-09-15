@@ -14,19 +14,20 @@ const A5 = { width: 595, height: 421 };
 
 function usage(message) {
   if (message) console.error(`Error: ${message}\n`);
-  console.error(`Usage: node transform-certyiq.js --input <source.pdf> --output <result.pdf> [--logo <replacement-image>] [--url <website>] [--email <address>]`);
+  console.error(`Usage: node transform-certyiq.js --input <source.pdf> --output <result.pdf> [--logo <primary-image>] [--secondary-logo <corner-image>] [--url <website>] [--email <address>]`);
   process.exitCode = message ? 1 : 0;
 }
 
 function parseArgs(argv) {
-  const values = { url: 'https://dump4exam.vercel.app/', email: 'Dump4Exam@gmail.com', logo: path.join(moduleDirectory, 'assets', 'dump4exam.png') };
+  const values = { url: 'https://dump4exam.vercel.app/', email: 'Dump4Exam@gmail.com', logo: path.join(moduleDirectory, 'assets', 'pdf-logo.png'), secondaryLogo: path.join(moduleDirectory, 'assets', 'logo.png') };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     if (arg === '--help') return { help: true };
-    if (!['--input', '--logo', '--output', '--url', '--email'].includes(arg)) return { error: `Unknown option: ${arg}` };
+    if (!['--input', '--logo', '--secondary-logo', '--output', '--url', '--email'].includes(arg)) return { error: `Unknown option: ${arg}` };
     const value = argv[index + 1];
     if (!value || value.startsWith('--')) return { error: `Missing value for ${arg}` };
-    values[arg.slice(2)] = value;
+    if (arg === '--secondary-logo') values.secondaryLogo = value;
+    else values[arg.slice(2)] = value;
     index += 1;
   }
   for (const key of ['input', 'output']) if (!values[key]) return { error: `Missing --${key}` };
@@ -171,7 +172,7 @@ function addUriLink(page, pdf, box, url) {
   annotations.push(reference);
 }
 
-function drawCover(page, pdf, logo, font, url, exam) {
+function drawCover(page, pdf, primaryLogo, secondaryLogo, font, url, exam) {
   const { width, height } = page.getSize();
   const navy = rgb(0.06, 0.09, 0.15);
   const blue = rgb(0.08, 0.62, 0.86);
@@ -183,8 +184,9 @@ function drawCover(page, pdf, logo, font, url, exam) {
   page.drawCircle({ x: 122, y: 42, size: 48, color: orange, opacity: 0.22 });
   page.drawRectangle({ x: 195, y: height - 78, width: 54, height: 6, color: orange });
   page.drawRectangle({ x: 195, y: height - 90, width: 118, height: 4, color: blue });
-  page.drawRectangle({ x: 22, y: height - 140, width: 120, height: 106, color: rgb(1, 1, 1) });
-  placeNativeLogo(page, logo, { x: 28, top: 39, width: 108, height: 96 });
+  page.drawRectangle({ x: 18, y: height - 140, width: 128, height: 106, color: rgb(1, 1, 1), borderColor: rgb(0.72, 0.82, 0.9), borderWidth: 0.8 });
+  placeNativeLogo(page, primaryLogo, { x: 23, top: 39, width: 118, height: 96 });
+  placeNativeLogo(page, secondaryLogo, { x: width - 145, top: 18, width: 125, height: 34 });
 
   page.drawText('PREMIUM EXAM', { x: 29, y: height - 169, size: 11, font, color: rgb(1, 1, 1) });
   page.drawText('PREPARATION', { x: 29, y: height - 186, size: 11, font, color: rgb(1, 1, 1) });
@@ -203,7 +205,7 @@ function drawCover(page, pdf, logo, font, url, exam) {
   addUriLink(page, pdf, { x: 195, top: height - 49, width: 200, height: 15 }, url);
 }
 
-function drawAbout(page, pdf, logo, font, url, email) {
+function drawAbout(page, pdf, primaryLogo, secondaryLogo, font, url, email) {
   const { width, height } = page.getSize();
   const navy = rgb(0.06, 0.09, 0.15);
   const blue = rgb(0.08, 0.62, 0.86);
@@ -211,8 +213,9 @@ function drawAbout(page, pdf, logo, font, url, email) {
 
   page.drawRectangle({ x: 0, y: 0, width, height, color: rgb(1, 1, 1) });
   page.drawRectangle({ x: 0, y: height - 94, width, height: 94, color: navy });
-  page.drawRectangle({ x: 28, y: height - 81, width: 76, height: 62, color: rgb(1, 1, 1) });
-  placeNativeLogo(page, logo, { x: 33, top: 22, width: 66, height: 56 });
+  page.drawRectangle({ x: 24, y: height - 81, width: 84, height: 62, color: rgb(1, 1, 1), borderColor: rgb(0.72, 0.82, 0.9), borderWidth: 0.8 });
+  placeNativeLogo(page, primaryLogo, { x: 28, top: 22, width: 76, height: 56 });
+  placeNativeLogo(page, secondaryLogo, { x: width - 145, top: 18, width: 125, height: 34 });
   page.drawText('ABOUT DUMP4EXAM', { x: 135, y: height - 58, size: 17, font, color: rgb(1, 1, 1) });
   page.drawRectangle({ x: 39, y: height - 119, width: 54, height: 5, color: orange });
   page.drawText('Study smarter. Build confidence. Be ready.', { x: 39, y: height - 147, size: 18, font, color: navy });
@@ -240,7 +243,7 @@ function drawAbout(page, pdf, logo, font, url, email) {
   addUriLink(page, pdf, { x: 39, top: height - 38, width: 210, height: 14 }, `mailto:${email}`);
 }
 
-function drawThankYouPage(page, logo, font, url, email) {
+function drawThankYouPage(page, primaryLogo, secondaryLogo, font, url, email) {
   const { width, height } = page.getSize();
   const navy = rgb(0.06, 0.09, 0.15);
   const blue = rgb(0.08, 0.62, 0.86);
@@ -249,8 +252,9 @@ function drawThankYouPage(page, logo, font, url, email) {
   page.drawRectangle({ x: 0, y: 0, width: 74, height, color: navy });
   page.drawCircle({ x: 37, y: height - 92, size: 22, color: blue, opacity: 0.4 });
   page.drawCircle({ x: 37, y: 70, size: 33, color: orange, opacity: 0.35 });
-  page.drawRectangle({ x: 226, y: height - 157, width: 146, height: 119, color: rgb(1, 1, 1) });
-  placeNativeLogo(page, logo, { x: 235, top: 47, width: 128, height: 99 });
+  page.drawRectangle({ x: 215, y: height - 157, width: 168, height: 119, color: rgb(1, 1, 1), borderColor: rgb(0.72, 0.82, 0.9), borderWidth: 0.8 });
+  placeNativeLogo(page, primaryLogo, { x: 223, top: 47, width: 152, height: 99 });
+  placeNativeLogo(page, secondaryLogo, { x: width - 145, top: 18, width: 125, height: 34 });
   drawCenteredText(page, font, 'THANK YOU', width / 2 + 32, height - 245, 31, navy);
   drawCenteredText(page, font, 'Best wishes for your exam.', width / 2 + 32, height - 279, 15, orange);
   drawCenteredText(page, font, 'You have put in the effort. Stay focused, trust your preparation,', width / 2 + 32, height - 325, 10, rgb(0.34, 0.39, 0.46));
@@ -282,11 +286,14 @@ function drawPaperLink(page, pdf, font, url, baseline) {
   annotations.push(reference);
 }
 
-function drawQuestionHeaderBrand(page, logo, header) {
+function drawQuestionHeaderBrand(page, secondaryLogo, header) {
   const { height } = page.getSize();
-  const box = { x: header.x - 6, top: height - header.y - header.height - 4, width: header.width + 12, height: header.height + 7 };
+  const sourceTop = height - header.y - header.height;
+  // Leave a small inset above the replacement so it never reaches the page edge.
+  const logoTop = Math.max(12, sourceTop + 2);
+  const box = { x: header.x - 6, top: Math.max(9, sourceTop - 1), width: header.width + 12, height: header.height + 9 };
   page.drawRectangle({ x: box.x, y: height - box.top - box.height, width: box.width, height: box.height, color: rgb(1, 1, 1) });
-  placeNativeLogo(page, logo, { x: header.x - 4, top: height - header.y - header.height - 2, width: header.width + 8, height: header.height + 3 });
+  placeNativeLogo(page, secondaryLogo, { x: header.x - 4, top: logoTop, width: header.width + 8, height: header.height + 3 });
 }
 
 async function inspectSourceContent(sourceBytes, pageCount) {
@@ -318,20 +325,21 @@ async function main() {
   const sourceBytes = await readFile(args.input);
   const exam = await detectExamDetails(sourceBytes, args.input);
   const pdf = await PDFDocument.load(sourceBytes, { ignoreEncryption: true, updateMetadata: false });
-  const logo = await embedLogo(pdf, args.logo);
+  const primaryLogo = await embedLogo(pdf, args.logo);
+  const secondaryLogo = await embedLogo(pdf, args.secondaryLogo);
   const font = await pdf.embedFont(StandardFonts.Helvetica);
   const sourcePageCount = pdf.getPageCount();
   const { headers: questionHeaderBrands, lastPageText } = await inspectSourceContent(sourceBytes, sourcePageCount);
   if (/\bthank\s*you\b/i.test(lastPageText)) pdf.removePage(pdf.getPageCount() - 1);
   const pages = pdf.getPages();
   for (const page of pages) removeCertyIqLinks(page, pdf);
-  if (pages[0]) drawCover(pages[0], pdf, logo, font, args.url, exam);
-  if (pages[1]) drawAbout(pages[1], pdf, logo, font, args.url, args.email);
-  pages.forEach((page, index) => questionHeaderBrands[index]?.forEach(header => drawQuestionHeaderBrand(page, logo, header)));
+  if (pages[0]) drawCover(pages[0], pdf, primaryLogo, secondaryLogo, font, args.url, exam);
+  if (pages[1]) drawAbout(pages[1], pdf, primaryLogo, secondaryLogo, font, args.url, args.email);
+  pages.forEach((page, index) => questionHeaderBrands[index]?.forEach(header => drawQuestionHeaderBrand(page, secondaryLogo, header)));
   if (pages[2]) drawPaperLink(pages[2], pdf, font, args.url, 20);
   const lastContentPage = pages.at(-1);
   const thankYouPage = pdf.addPage([lastContentPage?.getWidth() ?? A5.width, lastContentPage?.getHeight() ?? A5.height]);
-  drawThankYouPage(thankYouPage, logo, font, args.url, args.email);
+  drawThankYouPage(thankYouPage, primaryLogo, secondaryLogo, font, args.url, args.email);
   await mkdir(path.dirname(path.resolve(args.output)), { recursive: true });
   await writeFile(args.output, await pdf.save({ useObjectStreams: true }));
   console.log(`Wrote ${args.output} (${pdf.getPageCount()} pages; ${exam.code}: ${exam.name}).`);
